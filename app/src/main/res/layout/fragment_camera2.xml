@@ -129,11 +129,29 @@
     <!-- Capture button -->
     <FrameLayout
         android:id="@+id/captureButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="4dp"
-        android:background="@drawable/capture_button_bg" />
+        android:layout_marginBottom="4dp">
+
+        <View
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/capture_button_bg" />
+
+        <TextView
+            android:id="@+id/tvRawUnsupported"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="-16dp"
+            android:text="@string/raw_unsupported"
+            android:textColor="#88FFFFFF"
+            android:textSize="8sp"
+            android:fontFamily="monospace"
+            android:visibility="gone" />
+
+    </FrameLayout>
 
     <!-- Info / capabilities button -->
     <TextView

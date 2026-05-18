@@ -270,6 +270,7 @@ class Camera2Fragment : Fragment() {
         val supported = currentCapabilities.supportsRaw
         binding.captureButton.alpha = if (supported) 1f else 0.4f
         binding.captureButton.isEnabled = supported
+        binding.tvRawUnsupported.visibility = if (supported) android.view.View.GONE else android.view.View.VISIBLE
         binding.captureButton.setOnClickListener {
             if (supported) controller.captureRaw(requireContext())
         }
