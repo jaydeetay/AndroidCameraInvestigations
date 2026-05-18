@@ -13,8 +13,8 @@ data class PhysicalCamera(
 data class CameraCapabilities(
     val cameraId: String,
     val facing: Int,                        // CameraCharacteristics.LENS_FACING_*
-    val focalLengths: FloatArray,
-    val apertures: FloatArray,
+    val focalLengths: List<Float>,
+    val apertures: List<Float>,
     val isoRange: Range<Int>?,
     val exposureTimeRange: Range<Long>?,    // nanoseconds
     val hardwareLevel: Int,                 // CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_*
@@ -22,7 +22,7 @@ data class CameraCapabilities(
     val supportsOis: Boolean,
     val isLogicalCamera: Boolean,
     val physicalCameras: List<PhysicalCamera>,
-    val sensorSizeM: SizeF?,               // physical sensor size in millimetres
+    val sensorSizeMm: SizeF?,              // physical sensor size in millimetres
     val zoomRatioRange: Range<Float>?      // null on API < 30
 ) {
     val hardwareLevelName: String get() = when (hardwareLevel) {

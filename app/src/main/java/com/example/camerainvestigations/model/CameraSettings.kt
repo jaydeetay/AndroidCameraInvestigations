@@ -18,7 +18,7 @@ data class CameraSettings(
             return when {
                 seconds >= 1.0 -> "${seconds.toLong()}s"
                 else -> {
-                    val denom = (1.0 / seconds).toLong()
+                    val denom = Math.round(1.0 / seconds)
                     "1/${denom}s"
                 }
             }

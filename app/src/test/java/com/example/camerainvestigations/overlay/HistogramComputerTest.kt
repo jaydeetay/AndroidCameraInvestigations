@@ -27,13 +27,13 @@ class HistogramComputerTest {
     @Test
     fun `isClipping returns true when top bin exceeds threshold`() {
         val histogram = IntArray(256).also { it[255] = 100 }
-        assertTrue(HistogramComputer.isClipping(histogram, total = 100, threshold = 0.005f))
+        assertTrue(HistogramComputer.isClipping(histogram, threshold = 0.005f))
     }
 
     @Test
     fun `isClipping returns false when top bin is within threshold`() {
-        val histogram = IntArray(256).also { it[255] = 1 }
-        assertFalse(HistogramComputer.isClipping(histogram, total = 10_000, threshold = 0.005f))
+        val histogram = IntArray(256).also { it[255] = 1; it[0] = 9999 }
+        assertFalse(HistogramComputer.isClipping(histogram, threshold = 0.005f))
     }
 
     @Test

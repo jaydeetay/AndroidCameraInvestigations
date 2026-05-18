@@ -32,7 +32,8 @@ object HistogramComputer {
     /**
      * Returns true if more than [threshold] fraction of sampled pixels are at maximum brightness.
      */
-    fun isClipping(histogram: IntArray, total: Int, threshold: Float = 0.005f): Boolean {
+    fun isClipping(histogram: IntArray, threshold: Float = 0.005f): Boolean {
+        val total = histogram.sum()
         if (total == 0) return false
         return histogram[255].toFloat() / total > threshold
     }

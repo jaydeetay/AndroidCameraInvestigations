@@ -32,4 +32,10 @@ class CameraSettingsTest {
     fun `focus display returns dioptre value for non-zero`() {
         assertEquals("0.50 D", CameraSettings.focusDistanceToDisplay(0.5f))
     }
+
+    @Test
+    fun `shutterNs rounds correctly for common speeds`() {
+        assertEquals("1/60s", CameraSettings.shutterNsToDisplay(16_666_667L))
+        assertEquals("1/125s", CameraSettings.shutterNsToDisplay(8_000_000L))
+    }
 }
