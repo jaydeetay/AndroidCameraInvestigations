@@ -1,6 +1,7 @@
 package com.example.camerainvestigations.camera2
 
 import android.annotation.SuppressLint
+import android.content.ContentValues
 import android.content.Context
 import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
@@ -10,6 +11,8 @@ import android.media.ImageReader
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
+import android.provider.MediaStore
+import android.util.Log
 import android.view.Surface
 import android.view.TextureView
 import com.example.camerainvestigations.model.CameraSettings
@@ -33,6 +36,11 @@ class Camera2Controller(
 
     private var histogramReader: ImageReader? = null
     private var histogramFrameCount = 0
+
+    private var rawReader: ImageReader? = null
+    private var pendingCaptureResult: TotalCaptureResult? = null
+    private var pendingRawImage: android.media.Image? = null
+    private val rawLock = Object()
 
     private var previewSurface: Surface? = null
 
@@ -91,8 +99,33 @@ class Camera2Controller(
 
     private fun startPreviewSession(previewSurface: Surface) {
         val histSurface = histogramReader!!.surface
+        val caps = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES) ?: intArrayOf()
+        val rawSupported = caps.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)
+
+        if (rawSupported) {
+            val pixelArraySize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)!!
+            rawReader = ImageReader.newInstance(
+                pixelArraySize.width, pixelArraySize.height,
+                ImageFormat.RAW_SENSOR, 2
+            ).apply {
+                setOnImageAvailableListener({ reader ->
+                    val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
+                    synchronized(rawLock) {
+                        pendingRawImage = image
+                        tryWriteDng()
+                    }
+                }, cameraHandler)
+            }
+        }
+
+        val surfaces = buildList {
+            add(previewSurface)
+            add(histSurface)
+            rawReader?.surface?.let { add(it) }
+        }
+
         cameraDevice!!.createCaptureSession(
-            listOf(previewSurface, histSurface),
+            surfaces,
             object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) {
                     captureSession = session
@@ -205,6 +238,8 @@ class Camera2Controller(
         cameraDevice?.close(); cameraDevice = null
         histogramReader?.setOnImageAvailableListener(null, null)
         histogramReader?.close(); histogramReader = null
+        rawReader?.setOnImageAvailableListener(null, null)
+        rawReader?.close(); rawReader = null
         previewSurface?.release(); previewSurface = null
         histogramFrameCount = 0
     }
@@ -214,8 +249,57 @@ class Camera2Controller(
         cameraThread.quitSafely()
     }
 
-    /** Stub — full implementation added in Task 8. */
-    fun captureRaw(context: Context) { /* implemented in Task 8 */ }
+    fun captureRaw(context: Context) {
+        val rawReaderLocal = rawReader ?: return
+        val surface = previewSurface ?: return
+
+        val builder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE) ?: return
+        builder.addTarget(surface)
+        builder.addTarget(rawReaderLocal.surface)
+        applySettings(builder, currentSettings)
+        builder[CaptureRequest.CONTROL_CAPTURE_INTENT] = CaptureRequest.CONTROL_CAPTURE_INTENT_STILL_CAPTURE
+
+        captureSession?.capture(builder.build(), object : CameraCaptureSession.CaptureCallback() {
+            override fun onCaptureCompleted(
+                session: CameraCaptureSession,
+                request: CaptureRequest,
+                result: TotalCaptureResult
+            ) {
+                synchronized(rawLock) {
+                    pendingCaptureResult = result
+                    tryWriteDng()
+                }
+            }
+        }, cameraHandler)
+    }
+
+    private fun tryWriteDng() {
+        // Must be called while holding rawLock
+        val image = pendingRawImage ?: return
+        val result = pendingCaptureResult ?: return
+
+        // Consume both to avoid double-write
+        pendingRawImage = null
+        pendingCaptureResult = null
+
+        try {
+            runCatching {
+                val dng = DngCreator(characteristics, result)
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, "IMG_${System.currentTimeMillis()}.dng")
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/x-adobe-dng")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/CameraInvestigations")
+                }
+                val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)!!
+                context.contentResolver.openOutputStream(uri)!!.use { dng.writeImage(it, image) }
+                dng.close()
+            }.onFailure {
+                Log.e(TAG, "Failed to write DNG", it)
+            }
+        } finally {
+            image.close()
+        }
+    }
 
     private fun colorTemperatureToGains(kelvin: Int): RggbChannelVector {
         val t = kelvin.coerceIn(2000, 8000).toFloat()
