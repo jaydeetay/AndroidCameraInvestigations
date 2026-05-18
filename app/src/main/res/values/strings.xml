@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Camera Investigations</string>
+    <string name="tab_camera2">CAMERA2</string>
+    <string name="tab_camerax">CAMERAX</string>
+    <string name="permission_rationale">Camera permission is required to preview and capture images.</string>
+    <string name="raw_unsupported">RAW unsupported</string>
+</resources>
