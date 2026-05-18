@@ -20,7 +20,9 @@ class MainActivity : AppCompatActivity() {
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (!granted) {
+        if (granted) {
+            setupViewPager()
+        } else {
             Toast.makeText(this, getString(R.string.permission_rationale), Toast.LENGTH_LONG).show()
             finish()
         }
