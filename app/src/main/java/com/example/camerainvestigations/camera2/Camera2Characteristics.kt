@@ -15,7 +15,9 @@ object Camera2Characteristics {
     fun readAll(context: Context): List<CameraCapabilities> {
         val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         return manager.cameraIdList.mapNotNull { id ->
-            runCatching { read(manager, id) }.getOrNull()
+            runCatching { read(manager, id) }
+                .onFailure { android.util.Log.e("Camera2Char", "Failed to read camera $id", it) }
+                .getOrNull()
         }
     }
 
@@ -38,7 +40,9 @@ object Camera2Characteristics {
                     focalLength = pc.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)?.firstOrNull() ?: 0f,
                     aperture = pc.get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)?.firstOrNull() ?: 0f
                 )
-            }.getOrNull()
+            }
+            .onFailure { android.util.Log.e("Camera2Char", "Failed to read physical camera $pid", it) }
+            .getOrNull()
         }
 
         val sensorSize = c.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
@@ -77,10 +81,13 @@ object Camera2Characteristics {
         }
 
         add("Camera ID", cameraId)
-        add("Facing", when (c.get(CameraCharacteristics.LENS_FACING)) {
-            CameraCharacteristics.LENS_FACING_BACK -> "BACK"
-            CameraCharacteristics.LENS_FACING_FRONT -> "FRONT"
-            else -> "EXTERNAL"
+        add("Facing", c.get(CameraCharacteristics.LENS_FACING)?.let {
+            when (it) {
+                CameraCharacteristics.LENS_FACING_BACK  -> "BACK"
+                CameraCharacteristics.LENS_FACING_FRONT -> "FRONT"
+                CameraCharacteristics.LENS_FACING_EXTERNAL -> "EXTERNAL"
+                else -> "UNKNOWN($it)"
+            }
         })
         add("Hardware Level", when (c.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)) {
             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY -> "LEGACY"
@@ -98,7 +105,13 @@ object Camera2Characteristics {
         add("RAW Support", c.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
             ?.contains(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_RAW))
         add("OIS Modes", c.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION_MODES)
-            ?.map { if (it == 1) "OIS_ON" else "OIS_OFF" })
+            ?.map {
+                when (it) {
+                    CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON  -> "OIS_ON"
+                    CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_OFF -> "OIS_OFF"
+                    else -> "OIS_UNKNOWN($it)"
+                }
+            })
         add("Noise Reduction Modes", c.get(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)?.contentToString())
         add("Max Analog Sensitivity", c.get(CameraCharacteristics.SENSOR_MAX_ANALOG_SENSITIVITY))
         add("Flash Available", c.get(CameraCharacteristics.FLASH_INFO_AVAILABLE))

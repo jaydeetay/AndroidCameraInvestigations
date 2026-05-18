@@ -11,22 +11,26 @@ class HistogramView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
 ) : View(context, attrs) {
 
-    private var histogram: IntArray = IntArray(256)
-    private var clipping: Boolean = false
-    private var maxCount: Int = 1
+    private data class HistogramState(
+        val histogram: IntArray,
+        val clipping: Boolean,
+        val maxCount: Int
+    )
+
+    @Volatile
+    private var state = HistogramState(IntArray(256), false, 1)
 
     private val barPaint = Paint().apply { color = Color.parseColor("#AAFFFFFF") }
     private val clipPaint = Paint().apply { color = Color.parseColor("#FFFF4444") }
     private val bgPaint   = Paint().apply { color = Color.parseColor("#99000000") }
 
     fun update(histogram: IntArray, isClipping: Boolean) {
-        this.histogram = histogram
-        this.clipping = isClipping
-        this.maxCount = histogram.max().coerceAtLeast(1)
+        state = HistogramState(histogram, isClipping, histogram.max().coerceAtLeast(1))
         postInvalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
+        val (histogram, clipping, maxCount) = state
         val w = width.toFloat()
         val h = height.toFloat()
         canvas.drawRect(0f, 0f, w, h, bgPaint)
