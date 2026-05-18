@@ -106,7 +106,7 @@ class Camera2Fragment : Fragment() {
             val pill = TextView(requireContext()).apply {
                 text = label
                 setTextColor(Color.parseColor(colorHex))
-                background = requireContext().getDrawable(com.example.camerainvestigations.R.drawable.hud_label_bg)
+                background = androidx.core.content.ContextCompat.getDrawable(requireContext(), com.example.camerainvestigations.R.drawable.hud_label_bg)
                 setPadding(16, 8, 16, 8)
                 textSize = 11f
                 typeface = android.graphics.Typeface.MONOSPACE
@@ -272,7 +272,7 @@ class Camera2Fragment : Fragment() {
         binding.captureButton.isEnabled = supported
         binding.tvRawUnsupported.visibility = if (supported) android.view.View.GONE else android.view.View.VISIBLE
         binding.captureButton.setOnClickListener {
-            if (supported) controller.captureRaw(requireContext())
+            if (supported) controller.captureRaw()
         }
     }
 

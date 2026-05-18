@@ -132,7 +132,8 @@ class Camera2Controller(
                     issueRepeatingRequest(previewSurface, histSurface)
                 }
                 override fun onConfigureFailed(session: CameraCaptureSession) {
-                    android.util.Log.e(TAG, "CameraCaptureSession configuration failed for camera $cameraId")
+                    isOpening = false
+                    Log.e(TAG, "CameraCaptureSession configuration failed for camera $cameraId")
                 }
             },
             cameraHandler
@@ -249,7 +250,7 @@ class Camera2Controller(
         cameraThread.quitSafely()
     }
 
-    fun captureRaw(context: Context) {
+    fun captureRaw() {
         val rawReaderLocal = rawReader ?: return
         val surface = previewSurface ?: return
 
@@ -284,15 +285,15 @@ class Camera2Controller(
 
         try {
             runCatching {
-                val dng = DngCreator(characteristics, result)
                 val values = ContentValues().apply {
                     put(MediaStore.Images.Media.DISPLAY_NAME, "IMG_${System.currentTimeMillis()}.dng")
                     put(MediaStore.Images.Media.MIME_TYPE, "image/x-adobe-dng")
                     put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/CameraInvestigations")
                 }
                 val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)!!
-                context.contentResolver.openOutputStream(uri)!!.use { dng.writeImage(it, image) }
-                dng.close()
+                DngCreator(characteristics, result).use { dng ->
+                    context.contentResolver.openOutputStream(uri)!!.use { dng.writeImage(it, image) }
+                }
             }.onFailure {
                 Log.e(TAG, "Failed to write DNG", it)
             }
