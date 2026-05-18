@@ -2,6 +2,9 @@ package com.example.camerainvestigations.camerax
 
 import android.content.ContentValues
 import android.content.Context
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.params.RggbChannelVector
 import android.os.Build
@@ -50,7 +53,14 @@ class CameraXController(
         val captureBuilder = ImageCapture.Builder()
             .setOutputFormat(ImageCapture.OUTPUT_FORMAT_RAW)
 
-        applyCamera2Interop(previewBuilder, analysisBuilder, captureBuilder, currentSettings)
+        val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        val oisModes = runCatching {
+            cameraManager.getCameraCharacteristics(currentCameraId)
+                .get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION_MODES) ?: intArrayOf()
+        }.getOrDefault(intArrayOf())
+        val supportsOis = oisModes.contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)
+
+        applyCamera2Interop(previewBuilder, analysisBuilder, captureBuilder, currentSettings, supportsOis)
 
         val preview = previewBuilder.build().also {
             it.setSurfaceProvider(previewView.surfaceProvider)
@@ -100,7 +110,8 @@ class CameraXController(
         previewBuilder: Preview.Builder,
         analysisBuilder: ImageAnalysis.Builder,
         captureBuilder: ImageCapture.Builder,
-        s: CameraSettings
+        s: CameraSettings,
+        supportsOis: Boolean = false
     ) {
         listOf(
             Camera2Interop.Extender(previewBuilder),
@@ -132,6 +143,14 @@ class CameraXController(
 
             if (Build.VERSION.SDK_INT >= 30) {
                 ext.setCaptureRequestOption(CaptureRequest.CONTROL_ZOOM_RATIO, s.zoom)
+            }
+
+            if (supportsOis) {
+                ext.setCaptureRequestOption(
+                    CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
+                    if (s.oisEnabled) CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON
+                    else CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF
+                )
             }
         }
     }

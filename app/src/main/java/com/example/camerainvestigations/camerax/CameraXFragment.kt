@@ -77,9 +77,13 @@ class CameraXFragment : Fragment() {
             Triple("FOCUS","#FFEAA888") { showFocusSlider() },
             Triple("ZOOM","#FFAA88E8") { showZoomSlider() }
         )
+        if (currentCapabilities.supportsOis) {
+            params += Triple("OIS", "#FF88E8E8") { toggleOis() }
+        }
         params.forEach { (label, colorHex, action) ->
             val pill = TextView(requireContext()).apply {
                 text = label
+                tag = label
                 setTextColor(Color.parseColor(colorHex))
                 background = ContextCompat.getDrawable(requireContext(), R.drawable.hud_label_bg)
                 setPadding(16, 8, 16, 8)
@@ -92,6 +96,13 @@ class CameraXFragment : Fragment() {
             lp.marginEnd = 6
             pill.layoutParams = lp
         }
+    }
+
+    private fun toggleOis() {
+        settings = settings.copy(oisEnabled = !settings.oisEnabled)
+        controller.applySettings(settings)
+        binding.pillsContainer.findViewWithTag<TextView>("OIS")?.text =
+            if (settings.oisEnabled) "OIS ON" else "OIS OFF"
     }
 
     private fun showIsoSlider() {
@@ -227,6 +238,7 @@ class CameraXFragment : Fragment() {
                     controller.switchCamera(cap.cameraId)
                     binding.tvCameraSelector.text = "${"%.0f".format(cap.primaryFocalLength)}mm ▾"
                     updateHardwareLevelBadge()
+                    setupPills()
                     setupCapture()
                     sheet.dismiss()
                 }
