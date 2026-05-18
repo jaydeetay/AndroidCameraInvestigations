@@ -43,12 +43,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupViewPager() {
-        val fragments = listOf(Camera2Fragment(), CameraXFragment())
         val titles = listOf(getString(R.string.tab_camera2), getString(R.string.tab_camerax))
 
         binding.viewPager.adapter = object : androidx.fragment.app.FragmentStateAdapter(this) {
-            override fun getItemCount() = fragments.size
-            override fun createFragment(position: Int) = fragments[position]
+            override fun getItemCount() = titles.size
+            override fun createFragment(position: Int) = when (position) {
+                0 -> Camera2Fragment()
+                1 -> CameraXFragment()
+                else -> throw IllegalArgumentException("Unknown tab position: $position")
+            }
         }
         binding.viewPager.offscreenPageLimit = ViewPager2.OFFSCREEN_PAGE_LIMIT_DEFAULT
 
