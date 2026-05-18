@@ -249,6 +249,7 @@ class Camera2Fragment : Fragment() {
                     updateCameraSelectorLabel()
                     updateHardwareLevelBadge()
                     setupPills()  // re-create pills (OIS may change)
+                    setupCapture()
                     sheet.dismiss()
                 }
             }
