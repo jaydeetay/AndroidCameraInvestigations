@@ -34,17 +34,29 @@ class Camera2Controller(
     private var histogramReader: ImageReader? = null
     private var histogramFrameCount = 0
 
+    private var previewSurface: Surface? = null
+
+    @Volatile private var isOpening = false
+
+    private var cachedCharacteristics: CameraCharacteristics? = null
+
     private var lastFrameTimestamp = 0L
     var currentSettings = CameraSettings()
         private set
 
     val characteristics: CameraCharacteristics
-        get() = manager.getCameraCharacteristics(cameraId)
+        get() = cachedCharacteristics ?: manager.getCameraCharacteristics(cameraId).also {
+            cachedCharacteristics = it
+        }
 
     @SuppressLint("MissingPermission")
     fun openCamera() {
+        if (isOpening) return
+        isOpening = true
         val st = textureView.surfaceTexture ?: return
         st.setDefaultBufferSize(1920, 1080)
+        previewSurface?.release()
+        previewSurface = Surface(st)
 
         histogramReader = ImageReader.newInstance(640, 360, ImageFormat.YUV_420_888, 2).apply {
             setOnImageAvailableListener({ reader ->
@@ -68,11 +80,12 @@ class Camera2Controller(
 
         manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
             override fun onOpened(device: CameraDevice) {
+                isOpening = false
                 cameraDevice = device
-                startPreviewSession(Surface(st))
+                startPreviewSession(previewSurface!!)
             }
-            override fun onDisconnected(device: CameraDevice) { device.close(); cameraDevice = null }
-            override fun onError(device: CameraDevice, error: Int) { device.close(); cameraDevice = null }
+            override fun onDisconnected(device: CameraDevice) { isOpening = false; device.close(); cameraDevice = null }
+            override fun onError(device: CameraDevice, error: Int) { isOpening = false; device.close(); cameraDevice = null }
         }, cameraHandler)
     }
 
@@ -85,7 +98,9 @@ class Camera2Controller(
                     captureSession = session
                     issueRepeatingRequest(previewSurface, histSurface)
                 }
-                override fun onConfigureFailed(session: CameraCaptureSession) {}
+                override fun onConfigureFailed(session: CameraCaptureSession) {
+                    android.util.Log.e(TAG, "CameraCaptureSession configuration failed for camera $cameraId")
+                }
             },
             cameraHandler
         )
@@ -148,8 +163,7 @@ class Camera2Controller(
 
     fun applySettings(settings: CameraSettings) {
         currentSettings = settings
-        val st = textureView.surfaceTexture ?: return
-        val previewSurface = Surface(st)
+        val previewSurface = previewSurface ?: return
         val histSurface = histogramReader?.surface ?: return
         val builder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW) ?: return
         builder.addTarget(previewSurface)
@@ -182,13 +196,17 @@ class Camera2Controller(
     fun switchCamera(newCameraId: String) {
         closeCamera()
         cameraId = newCameraId
+        cachedCharacteristics = null
         openCamera()
     }
 
     fun closeCamera() {
         captureSession?.close(); captureSession = null
         cameraDevice?.close(); cameraDevice = null
+        histogramReader?.setOnImageAvailableListener(null, null)
         histogramReader?.close(); histogramReader = null
+        previewSurface?.release(); previewSurface = null
+        histogramFrameCount = 0
     }
 
     fun destroy() {
@@ -205,5 +223,9 @@ class Camera2Controller(
         val rGain = 2.4f - 1.6f * warm
         val bGain = 0.5f + 1.7f * warm
         return RggbChannelVector(rGain, 1.0f, 1.0f, bGain)
+    }
+
+    companion object {
+        private const val TAG = "Camera2Controller"
     }
 }
