@@ -47,11 +47,11 @@ class Camera2Fragment : Fragment() {
             onSettingsConfirmed = { /* will update HUD in a future task */ },
             onFpsUpdate = { fps ->
                 activity?.runOnUiThread {
-                    binding.tvFps.text = "${"%.1f".format(fps)} fps"
+                    _binding?.tvFps?.text = "${"%.1f".format(fps)} fps"
                 }
             },
             onHistogramReady = { hist, clipping ->
-                activity?.runOnUiThread { binding.histogramView.update(hist, clipping) }
+                activity?.runOnUiThread { _binding?.histogramView?.update(hist, clipping) }
             }
         )
 

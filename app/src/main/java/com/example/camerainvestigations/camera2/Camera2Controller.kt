@@ -61,7 +61,7 @@ class Camera2Controller(
     fun openCamera() {
         if (isOpening) return
         isOpening = true
-        val st = textureView.surfaceTexture ?: return
+        val st = textureView.surfaceTexture ?: run { isOpening = false; return }
         st.setDefaultBufferSize(1920, 1080)
         previewSurface?.release()
         previewSurface = Surface(st)
