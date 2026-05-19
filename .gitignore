@@ -1,11 +1,48 @@
-*.iml
-.gradle
-/local.properties
-/.idea
-.DS_Store
+# Built artifacts
+bin/
+gen/
+out/
 /build
-/captures
-.externalNativeBuild
-.cxx
-.superpowers/
+/*/build
+*.apk
+*.aar
+*.jar
+
+# Gradle
+.gradle/
+.gradletasknamecache
+gradle-app.setting
+
+# IntelliJ IDEA / Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Exceptions for IntelliJ IDEA/Android Studio (if you want to share some IDE settings)
+# !.idea/runConfigurations/
+# !.idea/copyright/
+# !.idea/scopes/
+
+# Android specific
+/local.properties
+/captures/
+.externalNativeBuild/
+.cxx/
+*.keystore
+*.jks
+google-services.json
+
+# NDK
+obj/
+
+# Logs
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Tool-specific/Custom
 .claude/
+.superpowers/
