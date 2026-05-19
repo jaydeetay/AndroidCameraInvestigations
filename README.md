@@ -9,3 +9,9 @@ I want to build a test Android app to help me understand the capabilities of the
   like you might have in a first person shooter game will do.  It should also display any settings that the camera API exposes (e.g. aperture, ISO, frames per second, shutter speed - whatever you can find).  The app needs to be functional rather     
   than pretty. Call out any areas where different phones might have different capabilities.  Remember that this is mostly for testing at night looking at the sky.          
 ```
+
+# Update 1.
+Claude messed up the gradle set up, missing the crucial 
+`android.useAndroidX=true` in the `gradle.properties` file.  Even with that the code does
+not build.
+OK, after getting Claude to fix gradle it looks like it now builds.

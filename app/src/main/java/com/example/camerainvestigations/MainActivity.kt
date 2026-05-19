@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.example.camerainvestigations.camera2.Camera2Fragment
 import com.example.camerainvestigations.camerax.CameraXFragment
@@ -45,7 +46,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupViewPager() {
         val titles = listOf(getString(R.string.tab_camera2), getString(R.string.tab_camerax))
 
-        binding.viewPager.adapter = object : androidx.fragment.app.FragmentStateAdapter(this) {
+        binding.viewPager.adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount() = titles.size
             override fun createFragment(position: Int) = when (position) {
                 0 -> Camera2Fragment()

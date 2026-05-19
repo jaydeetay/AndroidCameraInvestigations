@@ -1,8 +1,8 @@
 package com.example.camerainvestigations.model
 
-import android.graphics.SizeF
 import android.hardware.camera2.CameraCharacteristics
 import android.util.Range
+import android.util.SizeF
 
 data class PhysicalCamera(
     val id: String,
