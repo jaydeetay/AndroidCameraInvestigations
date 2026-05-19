@@ -45,10 +45,10 @@ class CameraXFragment : Fragment() {
             previewView = binding.previewView,
             lifecycleOwner = viewLifecycleOwner,
             onFpsUpdate = { fps ->
-                activity?.runOnUiThread { binding.tvFps.text = "${"%.1f".format(fps)} fps" }
+                activity?.runOnUiThread { _binding?.tvFps?.text = "${"%.1f".format(fps)} fps" }
             },
             onHistogramReady = { hist, clipping ->
-                activity?.runOnUiThread { binding.histogramView.update(hist, clipping) }
+                activity?.runOnUiThread { _binding?.histogramView?.update(hist, clipping) }
             }
         )
 

@@ -33,7 +33,7 @@ class CameraXController(
     private var currentCameraId: String = ""
     private var currentSettings = CameraSettings()
     private val analysisExecutor = Executors.newSingleThreadExecutor()
-    private var lastTimestamp = 0L
+    @Volatile private var lastTimestamp = 0L
 
     fun start(cameraId: String) {
         currentCameraId = cameraId
@@ -69,14 +69,14 @@ class CameraXController(
         val analysis = analysisBuilder.build().also { ia ->
             var frameCount = 0
             ia.setAnalyzer(analysisExecutor) { imageProxy ->
-                if (++frameCount % 3 == 0) {
-                    val ts = imageProxy.imageInfo.timestamp
-                    if (lastTimestamp != 0L) {
-                        val fps = 1_000_000_000f / (ts - lastTimestamp)
-                        onFpsUpdate(fps)
-                    }
-                    lastTimestamp = ts
+                val ts = imageProxy.imageInfo.timestamp
+                if (lastTimestamp != 0L) {
+                    val fps = 1_000_000_000f / (ts - lastTimestamp)
+                    onFpsUpdate(fps)
+                }
+                lastTimestamp = ts
 
+                if (++frameCount % 3 == 0) {
                     val plane = imageProxy.planes[0]
                     val histogram = HistogramComputer.compute(
                         plane.buffer.let { buf -> ByteArray(buf.remaining()).also { buf.get(it) } },
