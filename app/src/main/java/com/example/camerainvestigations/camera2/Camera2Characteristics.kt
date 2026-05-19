@@ -1,12 +1,12 @@
 package com.example.camerainvestigations.camera2
 
 import android.content.Context
-import android.graphics.SizeF
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.os.Build
 import android.util.Range
+import android.util.SizeF
 import com.example.camerainvestigations.model.CameraCapabilities
 import com.example.camerainvestigations.model.PhysicalCamera
 
@@ -28,7 +28,11 @@ object Camera2Characteristics {
         val isLogical = capabilities.contains(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA)
         val supportsRaw = capabilities.contains(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_RAW)
 
-        val oisModes = c.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION_MODES) ?: intArrayOf()
+        @Suppress("UNCHECKED_CAST")
+        val oisModes = c.keys
+            .firstOrNull { it.name == "android.lens.info.availableOpticalStabilization" }
+            ?.let { c.get(it as CameraCharacteristics.Key<IntArray>) }
+            ?: intArrayOf()
         val supportsOis = oisModes.contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)
 
         val physicalIds = if (isLogical) c.physicalCameraIds else emptySet()
@@ -104,14 +108,22 @@ object Camera2Characteristics {
         add("Sensor Pixel Array", c.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE))
         add("RAW Support", c.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
             ?.contains(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_RAW))
-        add("OIS Modes", c.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION_MODES)
-            ?.map {
-                when (it) {
+        
+        @Suppress("UNCHECKED_CAST")
+        val oisModes = c.keys
+            .firstOrNull { it.name == "android.lens.info.availableOpticalStabilization" }
+            ?.let { c.get(it as CameraCharacteristics.Key<IntArray>) }
+        if (oisModes != null) {
+            val modeStrings = oisModes.toList().map { mode ->
+                when (mode) {
                     CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON  -> "OIS_ON"
                     CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_OFF -> "OIS_OFF"
-                    else -> "OIS_UNKNOWN($it)"
+                    else -> "OIS_UNKNOWN($mode)"
                 }
-            })
+            }
+            add("OIS Modes", modeStrings)
+        }
+
         add("Noise Reduction Modes", c.get(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)?.contentToString())
         add("Max Analog Sensitivity", c.get(CameraCharacteristics.SENSOR_MAX_ANALOG_SENSITIVITY))
         add("Flash Available", c.get(CameraCharacteristics.FLASH_INFO_AVAILABLE))

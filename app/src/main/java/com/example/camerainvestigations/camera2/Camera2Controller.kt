@@ -173,7 +173,11 @@ class Camera2Controller(
             builder[CaptureRequest.LENS_FOCUS_DISTANCE] = s.focusDistance
         }
 
-        val oisModes = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION_MODES) ?: intArrayOf()
+        @Suppress("UNCHECKED_CAST")
+        val oisModes = characteristics.keys
+            .firstOrNull { it.name == "android.lens.info.availableOpticalStabilization" }
+            ?.let { characteristics.get(it as CameraCharacteristics.Key<IntArray>) }
+            ?: intArrayOf()
         if (oisModes.contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)) {
             builder[CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE] =
                 if (s.oisEnabled) CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON

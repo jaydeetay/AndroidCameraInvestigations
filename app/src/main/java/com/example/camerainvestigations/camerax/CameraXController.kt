@@ -51,13 +51,15 @@ class CameraXController(
         val analysisBuilder = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
         val captureBuilder = ImageCapture.Builder()
-            .setOutputFormat(ImageCapture.OUTPUT_FORMAT_RAW)
 
         val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        val oisModes = runCatching {
-            cameraManager.getCameraCharacteristics(currentCameraId)
-                .get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION_MODES) ?: intArrayOf()
-        }.getOrDefault(intArrayOf())
+        val characteristics = runCatching { cameraManager.getCameraCharacteristics(currentCameraId) }.getOrNull()
+        
+        @Suppress("UNCHECKED_CAST")
+        val oisModes = characteristics?.keys
+            ?.firstOrNull { it.name == "android.lens.info.availableOpticalStabilization" }
+            ?.let { characteristics.get(it as CameraCharacteristics.Key<IntArray>) }
+            ?: intArrayOf()
         val supportsOis = oisModes.contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)
 
         applyCamera2Interop(previewBuilder, analysisBuilder, captureBuilder, currentSettings, supportsOis)
@@ -168,8 +170,8 @@ class CameraXController(
     fun captureRaw() {
         val capture = imageCapture ?: return
         val values = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, "IMG_${System.currentTimeMillis()}.dng")
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/x-adobe-dng")
+            put(MediaStore.MediaColumns.DISPLAY_NAME, "IMG_${System.currentTimeMillis()}.jpg")
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
             put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/CameraInvestigations")
         }
         val options = ImageCapture.OutputFileOptions.Builder(
@@ -181,7 +183,7 @@ class CameraXController(
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {}
                 override fun onError(exc: ImageCaptureException) {
-                    Log.e(TAG, "RAW capture failed", exc)
+                    Log.e(TAG, "Capture failed", exc)
                 }
             })
     }
