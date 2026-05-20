@@ -15,3 +15,19 @@ Claude messed up the gradle set up, missing the crucial
 `android.useAndroidX=true` in the `gradle.properties` file.  Even with that the code does
 not build.
 OK, after getting Claude to fix gradle it looks like it now builds.
+
+# Costs to get this far
+
+| Metric | Value |
+| :--- | :--- |
+| **Total cost** | $13.93 |
+| **Total duration (API)** | 1h 4m 36s |
+| **Total duration (wall)** | 2d 0h 53m |
+| **Total code changes** | 5440 lines added, 97 lines removed |
+
+### Usage by model
+
+| Model | Input | Output | Cache Read | Cache Write | Cost |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `claude-haiku-4-5` | 681 | 17 | 0 | 0 | $0.0008 |
+| `claude-sonnet-4-6` | 7.3k | 260.7k | 20.3m | 1.0m | $13.93 |
