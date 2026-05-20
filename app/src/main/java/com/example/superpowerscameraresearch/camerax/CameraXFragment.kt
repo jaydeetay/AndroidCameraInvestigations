@@ -14,6 +14,7 @@ import com.example.superpowerscameraresearch.camera2.Camera2Characteristics
 import com.example.superpowerscameraresearch.databinding.FragmentCameraxBinding
 import com.example.superpowerscameraresearch.model.CameraCapabilities
 import com.example.superpowerscameraresearch.model.CameraSettings
+import com.example.superpowerscameraresearch.overlay.HistogramView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlin.math.exp
 import kotlin.math.ln
