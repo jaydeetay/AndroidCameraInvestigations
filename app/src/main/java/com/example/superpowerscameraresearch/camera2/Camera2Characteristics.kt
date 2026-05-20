@@ -1,4 +1,4 @@
-package com.example.camerainvestigations.camera2
+package com.example.superpowerscameraresearch.camera2
 
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
@@ -7,8 +7,8 @@ import android.hardware.camera2.CameraMetadata
 import android.os.Build
 import android.util.Range
 import android.util.SizeF
-import com.example.camerainvestigations.model.CameraCapabilities
-import com.example.camerainvestigations.model.PhysicalCamera
+import com.example.superpowerscameraresearch.model.CameraCapabilities
+import com.example.superpowerscameraresearch.model.PhysicalCamera
 
 object Camera2Characteristics {
 

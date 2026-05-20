@@ -1,10 +1,9 @@
-package com.example.camerainvestigations.camera2
+package com.example.superpowerscameraresearch.camera2
 
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.ImageFormat
-import android.graphics.SurfaceTexture
 import android.hardware.camera2.*
 import android.hardware.camera2.params.RggbChannelVector
 import android.media.ImageReader
@@ -15,8 +14,8 @@ import android.provider.MediaStore
 import android.util.Log
 import android.view.Surface
 import android.view.TextureView
-import com.example.camerainvestigations.model.CameraSettings
-import com.example.camerainvestigations.overlay.HistogramComputer
+import com.example.superpowerscameraresearch.model.CameraSettings
+import com.example.superpowerscameraresearch.overlay.HistogramComputer
 
 class Camera2Controller(
     private val context: Context,

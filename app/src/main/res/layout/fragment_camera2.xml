@@ -9,12 +9,12 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <com.example.camerainvestigations.overlay.ReticleView
+    <superpowerscameraresearch.overlay.ReticleView
         android:id="@+id/reticleView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <com.example.camerainvestigations.overlay.HistogramView
+    <superpowerscameraresearch.overlay.HistogramView
         android:id="@+id/histogramView"
         android:layout_width="88dp"
         android:layout_height="44dp"

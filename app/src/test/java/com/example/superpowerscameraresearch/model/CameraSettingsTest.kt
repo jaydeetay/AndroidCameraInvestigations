@@ -1,4 +1,4 @@
-package com.example.camerainvestigations.model
+package com.example.superpowerscameraresearch.model
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

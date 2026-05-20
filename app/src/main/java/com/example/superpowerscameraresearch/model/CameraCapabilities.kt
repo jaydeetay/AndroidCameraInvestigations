@@ -1,4 +1,4 @@
-package com.example.camerainvestigations.model
+package com.example.superpowerscameraresearch.model
 
 import android.hardware.camera2.CameraCharacteristics
 import android.util.Range

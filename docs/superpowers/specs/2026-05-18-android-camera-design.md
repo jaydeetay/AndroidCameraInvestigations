@@ -34,7 +34,7 @@ MainActivity
 ### Package layout
 
 ```
-com.example.camerainvestigations/
+superpowerscameraresearch/
   MainActivity.kt
   camera2/
     Camera2Fragment.kt           — UI, lifecycle, wires views to controller

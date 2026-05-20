@@ -1,4 +1,4 @@
-package com.example.camerainvestigations.model
+package com.example.superpowerscameraresearch.model
 
 data class CameraSettings(
     val isoAuto: Boolean = true,

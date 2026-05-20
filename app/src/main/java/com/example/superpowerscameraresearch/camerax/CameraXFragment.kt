@@ -1,4 +1,4 @@
-package com.example.camerainvestigations.camerax
+package com.example.superpowerscameraresearch.camerax
 
 import android.content.Context
 import android.graphics.Color
@@ -9,11 +9,11 @@ import android.view.*
 import android.widget.*
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.example.camerainvestigations.R
-import com.example.camerainvestigations.camera2.Camera2Characteristics
-import com.example.camerainvestigations.databinding.FragmentCameraxBinding
-import com.example.camerainvestigations.model.CameraCapabilities
-import com.example.camerainvestigations.model.CameraSettings
+import com.example.superpowerscameraresearch.R
+import com.example.superpowerscameraresearch.camera2.Camera2Characteristics
+import com.example.superpowerscameraresearch.databinding.FragmentCameraxBinding
+import com.example.superpowerscameraresearch.model.CameraCapabilities
+import com.example.superpowerscameraresearch.model.CameraSettings
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlin.math.exp
 import kotlin.math.ln

@@ -1,4 +1,4 @@
-package com.example.camerainvestigations.overlay
+package com.example.superpowerscameraresearch.overlay
 
 import android.content.Context
 import android.graphics.Canvas

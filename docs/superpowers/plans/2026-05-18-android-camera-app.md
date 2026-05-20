@@ -161,11 +161,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.camerainvestigations"
+    namespace = "superpowerscameraresearchearch"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.camerainvestigations"
+        applicationId = "superpowerscameraresearchearch"
         minSdk = 28
         targetSdk = 34
         versionCode = 1
@@ -313,7 +313,7 @@ git commit -m "feat: gradle project scaffolding"
 - [ ] **Step 5: Create `MainActivity.kt`**
 
 ```kotlin
-package com.example.camerainvestigations
+package superpowerscameraresearch
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -323,9 +323,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.viewpager2.widget.ViewPager2
-import com.example.camerainvestigations.camera2.Camera2Fragment
-import com.example.camerainvestigations.camerax.CameraXFragment
-import com.example.camerainvestigations.databinding.ActivityMainBinding
+import superpowerscameraresearch.camera2.Camera2Fragment
+import superpowerscameraresearch.camerax.CameraXFragment
+import superpowerscameraresearch.databinding.ActivityMainBinding
 import com.google.android.material.tabs.TabLayoutMediator
 
 class MainActivity : AppCompatActivity() {
@@ -400,7 +400,7 @@ git commit -m "feat: app shell with ViewPager2, dark theme, camera permission"
 Create `app/src/test/java/com/example/camerainvestigations/model/CameraSettingsTest.kt`:
 
 ```kotlin
-package com.example.camerainvestigations.model
+package superpowerscameraresearch.model
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -440,14 +440,14 @@ class CameraSettingsTest {
 - [ ] **Step 2: Run test to confirm it fails**
 
 ```bash
-./gradlew :app:test --tests "com.example.camerainvestigations.model.CameraSettingsTest"
+./gradlew :app:test --tests "superpowerscameraresearch.model.CameraSettingsTest"
 ```
 Expected: FAIL — `CameraSettings` not found.
 
 - [ ] **Step 3: Create `CameraSettings.kt`**
 
 ```kotlin
-package com.example.camerainvestigations.model
+package superpowerscameraresearch.model
 
 data class CameraSettings(
     val isoAuto: Boolean = true,
@@ -482,7 +482,7 @@ data class CameraSettings(
 - [ ] **Step 4: Create `CameraCapabilities.kt`**
 
 ```kotlin
-package com.example.camerainvestigations.model
+package superpowerscameraresearch.model
 
 import android.graphics.SizeF
 import android.hardware.camera2.CameraCharacteristics
@@ -532,7 +532,7 @@ data class CameraCapabilities(
 - [ ] **Step 5: Run tests — expect pass**
 
 ```bash
-./gradlew :app:test --tests "com.example.camerainvestigations.model.CameraSettingsTest"
+./gradlew :app:test --tests "superpowerscameraresearch.model.CameraSettingsTest"
 ```
 Expected: PASS (4 tests)
 
@@ -554,7 +554,7 @@ git commit -m "feat: CameraSettings and CameraCapabilities models with unit test
 - [ ] **Step 1: Write failing tests**
 
 ```kotlin
-package com.example.camerainvestigations.overlay
+package superpowerscameraresearch.overlay
 
 import org.junit.Assert.*
 import org.junit.Test
@@ -605,14 +605,14 @@ class HistogramComputerTest {
 - [ ] **Step 2: Run to confirm failure**
 
 ```bash
-./gradlew :app:test --tests "com.example.camerainvestigations.overlay.HistogramComputerTest"
+./gradlew :app:test --tests "superpowerscameraresearch.overlay.HistogramComputerTest"
 ```
 Expected: FAIL — `HistogramComputer` not found.
 
 - [ ] **Step 3: Create `HistogramComputer.kt`**
 
 ```kotlin
-package com.example.camerainvestigations.overlay
+package superpowerscameraresearch.overlay
 
 object HistogramComputer {
 
@@ -656,7 +656,7 @@ object HistogramComputer {
 - [ ] **Step 4: Run tests — expect pass**
 
 ```bash
-./gradlew :app:test --tests "com.example.camerainvestigations.overlay.HistogramComputerTest"
+./gradlew :app:test --tests "superpowerscameraresearch.overlay.HistogramComputerTest"
 ```
 Expected: PASS (5 tests)
 
@@ -680,7 +680,7 @@ git commit -m "feat: HistogramComputer with unit tests"
 - [ ] **Step 1: Create `ReticleView.kt`**
 
 ```kotlin
-package com.example.camerainvestigations.overlay
+package superpowerscameraresearch.overlay
 
 import android.content.Context
 import android.graphics.Canvas
@@ -726,7 +726,7 @@ class ReticleView @JvmOverloads constructor(
 - [ ] **Step 2: Create `HistogramView.kt`**
 
 ```kotlin
-package com.example.camerainvestigations.overlay
+package superpowerscameraresearch.overlay
 
 import android.content.Context
 import android.graphics.Canvas
@@ -815,7 +815,7 @@ git commit -m "feat: ReticleView, HistogramView, HUD drawables"
 - [ ] **Step 1: Create `Camera2Characteristics.kt`**
 
 ```kotlin
-package com.example.camerainvestigations.camera2
+package superpowerscameraresearch.camera2
 
 import android.content.Context
 import android.graphics.SizeF
@@ -824,8 +824,8 @@ import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.os.Build
 import android.util.Range
-import com.example.camerainvestigations.model.CameraCapabilities
-import com.example.camerainvestigations.model.PhysicalCamera
+import superpowerscameraresearch.model.CameraCapabilities
+import superpowerscameraresearch.model.PhysicalCamera
 
 object Camera2Characteristics {
 
@@ -944,7 +944,7 @@ Expected: `BUILD SUCCESSFUL`
 - [ ] **Step 3: Commit**
 
 ```bash
-git add app/src/main/java/com/example/camerainvestigations/camera2/Camera2Characteristics.kt
+git add app/src/main/java/com/example/superpowerscameraresearch/camera2/Camera2Characteristics.kt
 git commit -m "feat: Camera2Characteristics reader and dump utility"
 ```
 
@@ -971,12 +971,12 @@ git commit -m "feat: Camera2Characteristics reader and dump utility"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <com.example.camerainvestigations.overlay.ReticleView
+    <superpowerscameraresearch.overlay.ReticleView
         android:id="@+id/reticleView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <com.example.camerainvestigations.overlay.HistogramView
+    <superpowerscameraresearch.overlay.HistogramView
         android:id="@+id/histogramView"
         android:layout_width="88dp"
         android:layout_height="44dp"
@@ -1115,7 +1115,7 @@ git commit -m "feat: Camera2Characteristics reader and dump utility"
 - [ ] **Step 2: Create `Camera2Controller.kt`**
 
 ```kotlin
-package com.example.camerainvestigations.camera2
+package superpowerscameraresearch.camera2
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -1129,8 +1129,8 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.view.Surface
 import android.view.TextureView
-import com.example.camerainvestigations.model.CameraSettings
-import com.example.camerainvestigations.overlay.HistogramComputer
+import superpowerscameraresearch.model.CameraSettings
+import superpowerscameraresearch.overlay.HistogramComputer
 
 class Camera2Controller(
     private val context: Context,
@@ -1331,7 +1331,7 @@ class Camera2Controller(
 - [ ] **Step 3: Create `Camera2Fragment.kt`**
 
 ```kotlin
-package com.example.camerainvestigations.camera2
+package superpowerscameraresearch.camera2
 
 import android.content.Context
 import android.graphics.SurfaceTexture
@@ -1345,10 +1345,10 @@ import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import com.example.camerainvestigations.R
-import com.example.camerainvestigations.databinding.FragmentCamera2Binding
-import com.example.camerainvestigations.model.CameraCapabilities
-import com.example.camerainvestigations.model.CameraSettings
+import superpowerscameraresearch.R
+import superpowerscameraresearch.databinding.FragmentCamera2Binding
+import superpowerscameraresearch.model.CameraCapabilities
+import superpowerscameraresearch.model.CameraSettings
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlin.math.exp
 import kotlin.math.ln
@@ -1821,7 +1821,7 @@ Expected: `BUILD SUCCESSFUL`
 - [ ] **Step 3: Commit**
 
 ```bash
-git add app/src/main/java/com/example/camerainvestigations/camera2/Camera2Controller.kt
+git add app/src/main/java/com/example/superpowerscameraresearch/camera2/Camera2Controller.kt
 git commit -m "feat: Camera2 RAW/DNG capture via DngCreator + MediaStore"
 ```
 
@@ -1852,12 +1852,12 @@ Same as `fragment_camera2.xml` but replace `TextureView` with `PreviewView`:
         app:scaleType="fillCenter"
         xmlns:app="http://schemas.android.com/apk/res-auto" />
 
-    <com.example.camerainvestigations.overlay.ReticleView
+    <superpowerscameraresearch.overlay.ReticleView
         android:id="@+id/reticleView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <com.example.camerainvestigations.overlay.HistogramView
+    <superpowerscameraresearch.overlay.HistogramView
         android:id="@+id/histogramView"
         android:layout_width="88dp"
         android:layout_height="44dp"
@@ -1992,7 +1992,7 @@ Same as `fragment_camera2.xml` but replace `TextureView` with `PreviewView`:
 - [ ] **Step 2: Create `CameraXController.kt`**
 
 ```kotlin
-package com.example.camerainvestigations.camerax
+package superpowerscameraresearch.camerax
 
 import android.content.ContentValues
 import android.content.Context
@@ -2007,10 +2007,10 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import com.example.camerainvestigations.camera2.Camera2Characteristics
-import com.example.camerainvestigations.model.CameraCapabilities
-import com.example.camerainvestigations.model.CameraSettings
-import com.example.camerainvestigations.overlay.HistogramComputer
+import superpowerscameraresearch.camera2.Camera2Characteristics
+import superpowerscameraresearch.model.CameraCapabilities
+import superpowerscameraresearch.model.CameraSettings
+import superpowerscameraresearch.overlay.HistogramComputer
 import java.util.concurrent.Executors
 
 class CameraXController(
@@ -2174,7 +2174,7 @@ class CameraXController(
 `CameraXFragment` mirrors `Camera2Fragment` but delegates to `CameraXController`. Replace controller calls and the `textureView` with `previewView`.
 
 ```kotlin
-package com.example.camerainvestigations.camerax
+package superpowerscameraresearch.camerax
 
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
@@ -2182,10 +2182,10 @@ import android.os.Bundle
 import android.view.*
 import android.widget.*
 import androidx.fragment.app.Fragment
-import com.example.camerainvestigations.camera2.Camera2Characteristics
-import com.example.camerainvestigations.databinding.FragmentCameraxBinding
-import com.example.camerainvestigations.model.CameraCapabilities
-import com.example.camerainvestigations.model.CameraSettings
+import superpowerscameraresearch.camera2.Camera2Characteristics
+import superpowerscameraresearch.databinding.FragmentCameraxBinding
+import superpowerscameraresearch.model.CameraCapabilities
+import superpowerscameraresearch.model.CameraSettings
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlin.math.exp
 import kotlin.math.ln
@@ -2257,7 +2257,7 @@ class CameraXFragment : Fragment() {
             val pill = TextView(requireContext()).apply {
                 text = label
                 setTextColor(android.graphics.Color.parseColor(colorHex))
-                background = requireContext().getDrawable(com.example.camerainvestigations.R.drawable.hud_label_bg)
+                background = requireContext().getDrawable(superpowerscameraresearch.R.drawable.hud_label_bg)
                 setPadding(16, 8, 16, 8)
                 textSize = 11f
                 typeface = android.graphics.Typeface.MONOSPACE
@@ -2387,8 +2387,8 @@ class CameraXFragment : Fragment() {
 
     private fun showCameraSelectorSheet() {
         val sheet = BottomSheetDialog(requireContext())
-        val view = layoutInflater.inflate(com.example.camerainvestigations.R.layout.bottom_sheet_camera_selector, null)
-        val container = view.findViewById<ViewGroup>(com.example.camerainvestigations.R.id.cameraListContainer)
+        val view = layoutInflater.inflate(superpowerscameraresearch.R.layout.bottom_sheet_camera_selector, null)
+        val container = view.findViewById<ViewGroup>(superpowerscameraresearch.R.id.cameraListContainer)
 
         allCapabilities.forEach { cap ->
             val row = TextView(requireContext()).apply {
@@ -2434,8 +2434,8 @@ class CameraXFragment : Fragment() {
         val manager = requireContext().getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
         val entries = Camera2Characteristics.dumpAll(manager, currentCapabilities.cameraId)
         val sheet = BottomSheetDialog(requireContext())
-        val view = layoutInflater.inflate(com.example.camerainvestigations.R.layout.bottom_sheet_capabilities, null)
-        val container = view.findViewById<ViewGroup>(com.example.camerainvestigations.R.id.capabilitiesContainer)
+        val view = layoutInflater.inflate(superpowerscameraresearch.R.layout.bottom_sheet_capabilities, null)
+        val container = view.findViewById<ViewGroup>(superpowerscameraresearch.R.id.capabilitiesContainer)
         entries.forEach { (key, value) ->
             val row = TextView(requireContext()).apply {
                 text = "$key\n$value"

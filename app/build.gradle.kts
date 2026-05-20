@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.camerainvestigations"
+    namespace = "com.example.superpowerscameraresearch"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.camerainvestigations"
+        applicationId = "com.example.superpowerscameraresearch"
         minSdk = 28
         targetSdk = 35
         versionCode = 1

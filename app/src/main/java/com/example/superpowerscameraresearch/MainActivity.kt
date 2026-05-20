@@ -1,4 +1,4 @@
-package com.example.camerainvestigations
+package com.example.superpowerscameraresearch
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -9,9 +9,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
-import com.example.camerainvestigations.camera2.Camera2Fragment
-import com.example.camerainvestigations.camerax.CameraXFragment
-import com.example.camerainvestigations.databinding.ActivityMainBinding
+import com.example.superpowerscameraresearch.camera2.Camera2Fragment
+import com.example.superpowerscameraresearch.camerax.CameraXFragment
+import com.example.superpowerscameraresearch.databinding.ActivityMainBinding
 import com.google.android.material.tabs.TabLayoutMediator
 
 class MainActivity : AppCompatActivity() {

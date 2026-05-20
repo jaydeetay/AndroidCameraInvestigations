@@ -1,4 +1,4 @@
-package com.example.camerainvestigations.camerax
+package com.example.superpowerscameraresearch.camerax
 
 import android.content.ContentValues
 import android.content.Context
@@ -17,8 +17,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import com.example.camerainvestigations.model.CameraSettings
-import com.example.camerainvestigations.overlay.HistogramComputer
+import com.example.superpowerscameraresearch.model.CameraSettings
+import com.example.superpowerscameraresearch.overlay.HistogramComputer
 import java.util.concurrent.Executors
 
 class CameraXController(

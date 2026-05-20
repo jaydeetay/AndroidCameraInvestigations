@@ -1,4 +1,4 @@
-package com.example.camerainvestigations.camera2
+package com.example.superpowerscameraresearch.camera2
 
 import android.content.Context
 import android.graphics.Color
@@ -9,9 +9,9 @@ import android.os.Bundle
 import android.view.*
 import android.widget.*
 import androidx.fragment.app.Fragment
-import com.example.camerainvestigations.databinding.FragmentCamera2Binding
-import com.example.camerainvestigations.model.CameraCapabilities
-import com.example.camerainvestigations.model.CameraSettings
+import com.example.superpowerscameraresearch.databinding.FragmentCamera2Binding
+import com.example.superpowerscameraresearch.model.CameraCapabilities
+import com.example.superpowerscameraresearch.model.CameraSettings
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlin.math.exp
 import kotlin.math.ln
@@ -106,7 +106,7 @@ class Camera2Fragment : Fragment() {
             val pill = TextView(requireContext()).apply {
                 text = label
                 setTextColor(Color.parseColor(colorHex))
-                background = androidx.core.content.ContextCompat.getDrawable(requireContext(), com.example.camerainvestigations.R.drawable.hud_label_bg)
+                background = androidx.core.content.ContextCompat.getDrawable(requireContext(), com.example.superpowerscameraresearch.R.drawable.hud_label_bg)
                 setPadding(16, 8, 16, 8)
                 textSize = 11f
                 typeface = android.graphics.Typeface.MONOSPACE
