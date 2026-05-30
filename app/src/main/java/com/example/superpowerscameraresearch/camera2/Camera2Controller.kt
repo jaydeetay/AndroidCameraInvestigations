@@ -23,7 +23,8 @@ class Camera2Controller(
     private var cameraId: String,
     private val onSettingsConfirmed: (CameraSettings) -> Unit,
     private val onFpsUpdate: (Float) -> Unit,
-    private val onHistogramReady: (IntArray, Boolean) -> Unit
+    private val onHistogramReady: (IntArray, Boolean) -> Unit,
+    private val onLiveStatsUpdate: (aperture: Float?, focalLength: Float?, focusDistance: Float?, aeState: String) -> Unit
 ) {
     private val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
@@ -168,11 +169,9 @@ class Camera2Controller(
         builder[CaptureRequest.CONTROL_AF_MODE] = CaptureRequest.CONTROL_AF_MODE_OFF
         builder[CaptureRequest.LENS_FOCUS_DISTANCE] = s.focusDistance
 
-        @Suppress("UNCHECKED_CAST")
-        val oisModes = characteristics.keys
-            .firstOrNull { it.name == "android.lens.info.availableOpticalStabilization" }
-            ?.let { characteristics.get(it as CameraCharacteristics.Key<IntArray>) }
-            ?: intArrayOf()
+        val oisModes = characteristics.get(
+            CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION
+        ) ?: intArrayOf()
         if (oisModes.contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)) {
             builder[CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE] =
                 if (s.oisEnabled) CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON
@@ -192,6 +191,8 @@ class Camera2Controller(
                     android.graphics.Rect(left, top, left + cropW, top + cropH)
             }
         }
+
+        builder[CaptureRequest.NOISE_REDUCTION_MODE] = s.noiseReduction
     }
 
     fun applySettings(settings: CameraSettings) {
@@ -223,6 +224,12 @@ class Camera2Controller(
             if (confirmedIso != null && confirmedSs != null) {
                 onSettingsConfirmed(currentSettings.copy(iso = confirmedIso, shutterNs = confirmedSs))
             }
+
+            val aperture      = result.get(CaptureResult.LENS_APERTURE)
+            val focalLength   = result.get(CaptureResult.LENS_FOCAL_LENGTH)
+            val focusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
+            val aeState       = aeStateToString(result.get(CaptureResult.CONTROL_AE_STATE))
+            onLiveStatsUpdate(aperture, focalLength, focusDistance, aeState)
         }
     }
 
@@ -311,5 +318,14 @@ class Camera2Controller(
 
     companion object {
         private const val TAG = "Camera2Controller"
+
+        fun aeStateToString(state: Int?): String = when (state) {
+            CaptureResult.CONTROL_AE_STATE_SEARCHING -> "SEARCHING"
+            CaptureResult.CONTROL_AE_STATE_CONVERGED -> "CONVERGED"
+            CaptureResult.CONTROL_AE_STATE_LOCKED -> "LOCKED"
+            CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> "FLASH_REQ"
+            CaptureResult.CONTROL_AE_STATE_PRECAPTURE -> "PRECAPTURE"
+            else -> "INACTIVE"
+        }
     }
 }

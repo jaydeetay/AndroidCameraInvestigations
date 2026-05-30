@@ -44,7 +44,7 @@ class Camera2Fragment : Fragment() {
             context = requireContext(),
             textureView = binding.textureView,
             cameraId = currentCapabilities.cameraId,
-            onSettingsConfirmed = { /* will update HUD in a future task */ },
+            onSettingsConfirmed = { /* wired in Task 5 */ },
             onFpsUpdate = { fps ->
                 activity?.runOnUiThread {
                     _binding?.tvFps?.text = "${"%.1f".format(fps)} fps"
@@ -52,7 +52,8 @@ class Camera2Fragment : Fragment() {
             },
             onHistogramReady = { hist, clipping ->
                 activity?.runOnUiThread { _binding?.histogramView?.update(hist, clipping) }
-            }
+            },
+            onLiveStatsUpdate = { _, _, _, _ -> }
         )
 
         setupPills()
