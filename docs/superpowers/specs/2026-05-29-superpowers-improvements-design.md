@@ -4,7 +4,7 @@
 
 ## Overview
 
-Seven improvements to the CameraSuperpowers app, addressing weaknesses identified in the comparative review and usability issues found during hands-on use. Goal is a more reliable, more usable field tool for night-sky camera experimentation.
+Ten improvements to the CameraSuperpowers app, addressing weaknesses identified in the comparative review and usability issues found during hands-on use. Goal is a more reliable, more usable field tool for night-sky camera experimentation.
 
 ---
 
@@ -47,6 +47,30 @@ Keeps the thumb ~24dp from screen edge.
   ```
 - Labels show confirmed (actual) values only — no "requested vs. actual" distinction.
 
+The `onSettingsConfirmed` callback signature and `Camera2Controller.captureCallback` already produce the right data — this is purely a wiring change in `Camera2Fragment`.
+
+---
+
+## 3b. Extended live HUD
+
+**Problem:** CameraOneShot surfaces a richer set of live capture-result fields that are useful for night sky work and currently discarded.
+
+**Change:** Extend `captureCallback` in `Camera2Controller` to also extract and pass back:
+- `LENS_APERTURE` (Float) — actual aperture in use
+- `LENS_FOCAL_LENGTH` (Float) — actual focal length in use
+- `LENS_FOCUS_DISTANCE` (Float) — actual focus distance the lens settled at (diopters)
+- `CONTROL_AE_STATE` (Int) — mapped to a short string: SEARCHING / CONVERGED / LOCKED / INACTIVE
+- `CONTROL_AF_STATE` (Int) — mapped to: SEARCHING / FOCUSED / NOT_FOCUSED / INACTIVE
+
+These are delivered via a new `onLiveStatsUpdate: (aperture: Float?, focalLength: Float?, focusDistance: Float?, aeState: String, afState: String) -> Unit` callback alongside the existing `onSettingsConfirmed`.
+
+In `Camera2Fragment`, add a second HUD row (below the ISO/SS/FPS row) showing these five values as a single monospace line, e.g.:
+```
+f/1.8  26mm  0.12D  AE:CONVERGED  AF:FOCUSED
+```
+
+The AE and AF state fields are especially useful at night — they tell you when the camera has given up hunting.
+
 ---
 
 ## 4. Shutter press feedback
@@ -87,7 +111,33 @@ val oisModes = characteristics.get(
 
 ---
 
-## 7. Screen keep-on
+## 8. Noise reduction pill
+
+**Problem:** No control over noise reduction mode. For night sky stills HIGH_QUALITY is desirable; for live preview OFF or FAST keeps latency low.
+
+**Change:**
+- Add `noiseReduction: Int` to `CameraSettings` (default `CaptureRequest.NOISE_REDUCTION_MODE_FAST`).
+- Add an **NR** pill to the pills row in `Camera2Fragment`. Tapping cycles through: `FAST → HIGH_QUALITY → OFF → FAST`. Pill label updates to show current mode (`NR:HQ`, `NR:OFF`, `NR:FAST`).
+- In `Camera2Controller.applySettings(builder, s)`, set `CaptureRequest.NOISE_REDUCTION_MODE` from `s.noiseReduction`.
+- Only shown if the device reports `REQUEST_AVAILABLE_CAPABILITIES` includes noise reduction support (all FULL+ devices do; check `CameraCapabilities` to gate it).
+
+---
+
+## 9. Focus shortcuts: INF and AUTO pills
+
+**Problem:** The FOCUS distance slider (which implicitly engages manual focus mode) requires fine scrubbing to reach infinity. There's no way to trigger single-shot autofocus without going fully manual.
+
+**Change:**
+- Add two new pills: **INF** and **AF**.
+- **INF** pill: sets `CONTROL_AF_MODE = OFF` and `LENS_FOCUS_DISTANCE = 0.0f` in one tap. This is the primary mode for night sky work. Updates `settings.focusDistance = 0f` and `settings.focusAuto = false`.
+- **AF** pill: sets `CONTROL_AF_MODE = AUTO`. This is single-shot autofocus — the camera hunts once, locks, and stops. Useful for daytime / terrestrial use.
+- Continuous modes (`CONTINUOUS_PICTURE`, `CONTINUOUS_VIDEO`) are intentionally omitted — they hunt forever in low light.
+- Both pills sit adjacent to the existing **FOCUS** pill. The FOCUS pill retains its manual-distance slider behaviour (i.e. it implicitly engages OFF mode when the user drags).
+- `CameraSettings` gains a `focusMode: Int` field (default `CONTROL_AF_MODE_CONTINUOUS_PICTURE` for initial open, switched to OFF when FOCUS slider or INF is tapped).
+
+---
+
+## 10. Screen keep-on
 
 **Problem:** The display times out during a session, requiring a wake-and-unlock before continuing.
 
@@ -102,10 +152,11 @@ val oisModes = characteristics.get(
 | File | Changes |
 |---|---|
 | `res/drawable/slider_panel_bg.xml` | New shape drawable — dark background with rounded top corners |
-| `fragment_camera2.xml` | Pill margin, slider panel inset + new bg, add tvIso + tvShutter HUD labels |
-| `Camera2Fragment.kt` | Wire onSettingsConfirmed, shutter animation + haptics, screen keep-on |
-| `CameraXFragment.kt` | Screen keep-on |
-| `Camera2Controller.kt` | Reconnection retry, OIS fix |
+| `fragment_camera2.xml` | Pill margin, slider panel inset + new bg, add HUD label rows (ISO, SS, aperture, focal length, focus distance, AE/AF state) |
+| `model/CameraSettings.kt` | Add `noiseReduction`, `focusMode` fields |
+| `camera2/Camera2Controller.kt` | Reconnection retry, OIS fix, extended live stats callback |
+| `camera2/Camera2Fragment.kt` | Wire all HUD callbacks, shutter animation + haptics, NR pill, INF + AF pills, screen keep-on |
+| `camerax/CameraXFragment.kt` | Screen keep-on |
 
 ## Out of scope
 
