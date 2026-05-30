@@ -110,6 +110,7 @@ class Camera2Fragment : Fragment() {
             Triple("SS",    "#FF88E888") { showShutterSlider() },
             Triple("WB",    "#FF8888E8") { showWbSlider() },
             Triple("FOCUS", "#FFEAA888") { showFocusSlider() },
+            Triple("INF",   "#FFEAA888") { tapInfinity() },
             Triple("ZOOM",  "#FFAA88E8") { showZoomSlider() },
             Triple("NR",    "#FFE8CC88") { cycleNoiseReduction() }
         )
@@ -157,6 +158,16 @@ class Camera2Fragment : Fragment() {
         controller.applySettings(settings)
         binding.pillsContainer.findViewWithTag<TextView>("OIS")?.text =
             if (settings.oisEnabled) "OIS ON" else "OIS OFF"
+    }
+
+    private fun tapInfinity() {
+        settings = settings.copy(focusDistance = 0f)
+        controller.applySettings(settings)
+        if (binding.sliderPanel.visibility == View.VISIBLE &&
+            binding.tvParamName.text == "FOCUS DISTANCE") {
+            binding.seekBar.progress = 0
+            binding.tvParamValue.text = "∞"
+        }
     }
 
     // ── Slider helpers ───────────────────────────────────────────────────────
