@@ -63,6 +63,16 @@ class CameraXFragment : Fragment() {
         controller.start(defaultCam.cameraId)
     }
 
+    override fun onResume() {
+        super.onResume()
+        activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         controller.stop()

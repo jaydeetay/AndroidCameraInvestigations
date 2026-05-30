@@ -86,11 +86,13 @@ class Camera2Fragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (binding.textureView.isAvailable) controller.openCamera()
     }
 
     override fun onPause() {
         super.onPause()
+        activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         controller.closeCamera()
     }
 
