@@ -44,7 +44,12 @@ class Camera2Fragment : Fragment() {
             context = requireContext(),
             textureView = binding.textureView,
             cameraId = currentCapabilities.cameraId,
-            onSettingsConfirmed = { /* wired in Task 5 */ },
+            onSettingsConfirmed = { confirmed ->
+                activity?.runOnUiThread {
+                    _binding?.tvIso?.text = "ISO ${confirmed.iso}"
+                    _binding?.tvShutter?.text = CameraSettings.shutterNsToDisplay(confirmed.shutterNs)
+                }
+            },
             onFpsUpdate = { fps ->
                 activity?.runOnUiThread {
                     _binding?.tvFps?.text = "${"%.1f".format(fps)} fps"
@@ -53,7 +58,14 @@ class Camera2Fragment : Fragment() {
             onHistogramReady = { hist, clipping ->
                 activity?.runOnUiThread { _binding?.histogramView?.update(hist, clipping) }
             },
-            onLiveStatsUpdate = { _, _, _, _ -> }
+            onLiveStatsUpdate = { aperture, focalLength, focusDistance, aeState ->
+                activity?.runOnUiThread {
+                    val ap = aperture?.let { "f/${"%.1f".format(it)}" } ?: "f/?"
+                    val fl = focalLength?.let { "${"%.0f".format(it)}mm" } ?: "?mm"
+                    val fd = focusDistance?.let { CameraSettings.focusDistanceToDisplay(it) } ?: "?D"
+                    _binding?.tvLiveStats?.text = "$ap  $fl  $fd  AE:$aeState"
+                }
+            }
         )
 
         setupPills()
