@@ -45,7 +45,7 @@ class Camera2Controller(
     private var previewSurface: Surface? = null
 
     @Volatile private var isOpening = false
-    private var retryCount = 0
+    @Volatile private var retryCount = 0
 
     private var cachedCharacteristics: CameraCharacteristics? = null
 
@@ -259,6 +259,7 @@ class Camera2Controller(
         closeCamera()
         cameraId = newCameraId
         cachedCharacteristics = null
+        retryCount = 0
         openCamera()
     }
 
