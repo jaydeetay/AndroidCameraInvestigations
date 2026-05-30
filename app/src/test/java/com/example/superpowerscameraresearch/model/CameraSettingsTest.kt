@@ -12,7 +12,11 @@ class CameraSettingsTest {
         assertTrue(settings.isoAuto)
         assertTrue(settings.shutterAuto)
         assertTrue(settings.wbAuto)
-        assertTrue(settings.focusAuto)
+    }
+
+    @Test
+    fun `default noiseReduction is FAST (1)`() {
+        assertEquals(1, CameraSettings().noiseReduction)
     }
 
     @Test

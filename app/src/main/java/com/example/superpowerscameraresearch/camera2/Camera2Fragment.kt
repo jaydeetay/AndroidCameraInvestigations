@@ -172,7 +172,7 @@ class Camera2Fragment : Fragment() {
     private fun showFocusSlider() {
         showSlider("FOCUS DISTANCE", "∞ – 10D") { progress ->
             val d = progress / 1000f * 10f
-            settings = settings.copy(focusDistance = d, focusAuto = false)
+            settings = settings.copy(focusDistance = d)
             binding.tvParamValue.text = CameraSettings.focusDistanceToDisplay(d)
             controller.applySettings(settings)
         }

@@ -165,12 +165,8 @@ class Camera2Controller(
             builder[CaptureRequest.COLOR_CORRECTION_GAINS] = colorTemperatureToGains(s.whiteBalanceK)
         }
 
-        if (s.focusAuto) {
-            builder[CaptureRequest.CONTROL_AF_MODE] = CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-        } else {
-            builder[CaptureRequest.CONTROL_AF_MODE] = CaptureRequest.CONTROL_AF_MODE_OFF
-            builder[CaptureRequest.LENS_FOCUS_DISTANCE] = s.focusDistance
-        }
+        builder[CaptureRequest.CONTROL_AF_MODE] = CaptureRequest.CONTROL_AF_MODE_OFF
+        builder[CaptureRequest.LENS_FOCUS_DISTANCE] = s.focusDistance
 
         @Suppress("UNCHECKED_CAST")
         val oisModes = characteristics.keys

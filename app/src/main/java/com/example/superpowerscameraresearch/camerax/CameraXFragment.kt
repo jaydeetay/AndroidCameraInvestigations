@@ -182,7 +182,7 @@ class CameraXFragment : Fragment() {
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
                 if (!fromUser) return
                 val d = p / 1000f * 10f
-                settings = settings.copy(focusDistance = d, focusAuto = false)
+                settings = settings.copy(focusDistance = d)
                 binding.tvParamValue.text = CameraSettings.focusDistanceToDisplay(d)
                 controller.applySettings(settings)
             }

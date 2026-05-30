@@ -136,12 +136,8 @@ class CameraXController(
                 ext.setCaptureRequestOption(CaptureRequest.COLOR_CORRECTION_GAINS, colorTemperatureToGains(s.whiteBalanceK))
             }
 
-            if (s.focusAuto) {
-                ext.setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-            } else {
-                ext.setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                ext.setCaptureRequestOption(CaptureRequest.LENS_FOCUS_DISTANCE, s.focusDistance)
-            }
+            ext.setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+            ext.setCaptureRequestOption(CaptureRequest.LENS_FOCUS_DISTANCE, s.focusDistance)
 
             if (Build.VERSION.SDK_INT >= 30) {
                 ext.setCaptureRequestOption(CaptureRequest.CONTROL_ZOOM_RATIO, s.zoom)
