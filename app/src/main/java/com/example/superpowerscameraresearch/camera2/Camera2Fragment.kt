@@ -285,7 +285,17 @@ class Camera2Fragment : Fragment() {
         binding.captureButton.isEnabled = supported
         binding.tvRawUnsupported.visibility = if (supported) android.view.View.GONE else android.view.View.VISIBLE
         binding.captureButton.setOnClickListener {
-            if (supported) controller.captureRaw()
+            if (supported) {
+                it.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                it.animate()
+                    .scaleX(1.3f).scaleY(1.3f)
+                    .setDuration(120)
+                    .withEndAction {
+                        it.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+                    }
+                    .start()
+                controller.captureRaw()
+            }
         }
     }
 
