@@ -60,16 +60,15 @@ The `onSettingsConfirmed` callback signature and `Camera2Controller.captureCallb
 - `LENS_FOCAL_LENGTH` (Float) — actual focal length in use
 - `LENS_FOCUS_DISTANCE` (Float) — actual focus distance the lens settled at (diopters)
 - `CONTROL_AE_STATE` (Int) — mapped to a short string: SEARCHING / CONVERGED / LOCKED / INACTIVE
-- `CONTROL_AF_STATE` (Int) — mapped to: SEARCHING / FOCUSED / NOT_FOCUSED / INACTIVE
 
-These are delivered via a new `onLiveStatsUpdate: (aperture: Float?, focalLength: Float?, focusDistance: Float?, aeState: String, afState: String) -> Unit` callback alongside the existing `onSettingsConfirmed`.
+These are delivered via a new `onLiveStatsUpdate: (aperture: Float?, focalLength: Float?, focusDistance: Float?, aeState: String) -> Unit` callback alongside the existing `onSettingsConfirmed`.
 
-In `Camera2Fragment`, add a second HUD row (below the ISO/SS/FPS row) showing these five values as a single monospace line, e.g.:
+In `Camera2Fragment`, add a second HUD row (below the ISO/SS/FPS row) showing these four values as a single monospace line, e.g.:
 ```
-f/1.8  26mm  0.12D  AE:CONVERGED  AF:FOCUSED
+f/1.8  26mm  0.12D  AE:CONVERGED
 ```
 
-The AE and AF state fields are especially useful at night — they tell you when the camera has given up hunting.
+AF state is omitted — focus is always manual, so AF state would only ever read INACTIVE.
 
 ---
 
@@ -123,17 +122,16 @@ val oisModes = characteristics.get(
 
 ---
 
-## 9. Focus shortcuts: INF and AUTO pills
+## 9. Focus shortcut: INF pill
 
-**Problem:** The FOCUS distance slider (which implicitly engages manual focus mode) requires fine scrubbing to reach infinity. There's no way to trigger single-shot autofocus without going fully manual.
+**Problem:** The FOCUS distance slider requires fine scrubbing to reach infinity, which is the primary setting for night sky work.
 
 **Change:**
-- Add two new pills: **INF** and **AF**.
-- **INF** pill: sets `CONTROL_AF_MODE = OFF` and `LENS_FOCUS_DISTANCE = 0.0f` in one tap. This is the primary mode for night sky work. Updates `settings.focusDistance = 0f` and `settings.focusAuto = false`.
-- **AF** pill: sets `CONTROL_AF_MODE = AUTO`. This is single-shot autofocus — the camera hunts once, locks, and stops. Useful for daytime / terrestrial use.
-- Continuous modes (`CONTINUOUS_PICTURE`, `CONTINUOUS_VIDEO`) are intentionally omitted — they hunt forever in low light.
-- Both pills sit adjacent to the existing **FOCUS** pill. The FOCUS pill retains its manual-distance slider behaviour (i.e. it implicitly engages OFF mode when the user drags).
-- `CameraSettings` gains a `focusMode: Int` field (default `CONTROL_AF_MODE_CONTINUOUS_PICTURE` for initial open, switched to OFF when FOCUS slider or INF is tapped).
+- Add one new pill: **INF**.
+- **INF** pill: sets `CONTROL_AF_MODE = OFF` and `LENS_FOCUS_DISTANCE = 0.0f` in one tap. One-touch infinity lock for night sky use.
+- Sits adjacent to the existing **FOCUS** pill. The FOCUS pill retains its manual-distance slider behaviour (implicitly engages OFF mode when dragged).
+- No AF pill — autofocus modes are omitted entirely. Focus is always manual.
+- `CameraSettings` gains a `focusMode: Int` field (always `CONTROL_AF_MODE_OFF`; kept explicit so `applySettings` doesn't have to infer it).
 
 ---
 
