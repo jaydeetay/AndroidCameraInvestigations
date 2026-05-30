@@ -110,14 +110,15 @@ class Camera2Fragment : Fragment() {
             Triple("SS",    "#FF88E888") { showShutterSlider() },
             Triple("WB",    "#FF8888E8") { showWbSlider() },
             Triple("FOCUS", "#FFEAA888") { showFocusSlider() },
-            Triple("ZOOM",  "#FFAA88E8") { showZoomSlider() }
+            Triple("ZOOM",  "#FFAA88E8") { showZoomSlider() },
+            Triple("NR",    "#FFE8CC88") { cycleNoiseReduction() }
         )
         if (currentCapabilities.supportsOis) {
             params += Triple("OIS", "#FF88E8E8") { toggleOis() }
         }
         params.forEach { (label, colorHex, action) ->
             val pill = TextView(requireContext()).apply {
-                text = label
+                text = if (label == "NR") nrLabel(settings.noiseReduction) else label
                 setTextColor(Color.parseColor(colorHex))
                 background = androidx.core.content.ContextCompat.getDrawable(requireContext(), com.example.superpowerscameraresearch.R.drawable.hud_label_bg)
                 setPadding(16, 8, 16, 8)
@@ -129,6 +130,26 @@ class Camera2Fragment : Fragment() {
             binding.pillsContainer.addView(pill)
             (pill.layoutParams as LinearLayout.LayoutParams).marginEnd = 6
         }
+    }
+
+    private fun cycleNoiseReduction() {
+        val next = when (settings.noiseReduction) {
+            android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_FAST ->
+                android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
+            android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY ->
+                android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_OFF
+            else -> android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_FAST
+        }
+        settings = settings.copy(noiseReduction = next)
+        controller.applySettings(settings)
+        binding.pillsContainer.findViewWithTag<TextView>("NR")?.text = nrLabel(next)
+    }
+
+    private fun nrLabel(mode: Int): String = when (mode) {
+        android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_FAST -> "NR:FAST"
+        android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY -> "NR:HQ"
+        android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_OFF -> "NR:OFF"
+        else -> "NR:?"
     }
 
     private fun toggleOis() {
