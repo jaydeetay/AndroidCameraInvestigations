@@ -45,6 +45,7 @@ class Camera2Controller(
     private var previewSurface: Surface? = null
 
     @Volatile private var isOpening = false
+    private var retryCount = 0
 
     private var cachedCharacteristics: CameraCharacteristics? = null
 
@@ -89,11 +90,32 @@ class Camera2Controller(
         manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
             override fun onOpened(device: CameraDevice) {
                 isOpening = false
+                retryCount = 0
                 cameraDevice = device
                 startPreviewSession(previewSurface!!)
             }
-            override fun onDisconnected(device: CameraDevice) { isOpening = false; device.close(); cameraDevice = null }
-            override fun onError(device: CameraDevice, error: Int) { isOpening = false; device.close(); cameraDevice = null }
+            override fun onDisconnected(device: CameraDevice) {
+                isOpening = false
+                device.close()
+                cameraDevice = null
+                if (retryCount < MAX_RETRIES) {
+                    retryCount++
+                    cameraHandler.postDelayed({ openCamera() }, 500)
+                } else {
+                    Log.e(TAG, "Camera disconnected, max retries ($MAX_RETRIES) exhausted")
+                }
+            }
+            override fun onError(device: CameraDevice, error: Int) {
+                isOpening = false
+                device.close()
+                cameraDevice = null
+                if (retryCount < MAX_RETRIES) {
+                    retryCount++
+                    cameraHandler.postDelayed({ openCamera() }, 500)
+                } else {
+                    Log.e(TAG, "Camera error $error, max retries ($MAX_RETRIES) exhausted")
+                }
+            }
         }, cameraHandler)
     }
 
@@ -318,6 +340,7 @@ class Camera2Controller(
 
     companion object {
         private const val TAG = "Camera2Controller"
+        private const val MAX_RETRIES = 3
 
         fun aeStateToString(state: Int?): String = when (state) {
             CaptureResult.CONTROL_AE_STATE_SEARCHING -> "SEARCHING"
