@@ -120,6 +120,7 @@ class Camera2Controller(
                                 Log.e(TAG, "Failed to start preview session", e)
                                 device.close()
                                 cameraDevice = null
+                                handleCameraFailure(device, "Session start failed")
                             }
                         } else {
                             device.close()
