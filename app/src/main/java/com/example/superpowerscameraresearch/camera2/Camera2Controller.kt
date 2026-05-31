@@ -111,8 +111,18 @@ class Camera2Controller(
                         retryCount = 0
                         cameraDevice = device
                         val surface = previewSurface
-                        if (surface != null) startPreviewSession(surface)
-                        else { device.close(); cameraDevice = null }
+                        if (surface != null) {
+                            try {
+                                startPreviewSession(surface)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to start preview session", e)
+                                device.close()
+                                cameraDevice = null
+                            }
+                        } else {
+                            device.close()
+                            cameraDevice = null
+                        }
                     }
                 }
                 override fun onDisconnected(device: CameraDevice) {
@@ -321,6 +331,8 @@ class Camera2Controller(
         rawReader?.close(); rawReader = null
         previewSurface?.release(); previewSurface = null
         histogramFrameCount = 0
+        lastAperture = null; lastFocalLength = null
+        lastFocusDistance = null; lastAeState = null
     }
 
     fun destroy() {
