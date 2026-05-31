@@ -292,6 +292,7 @@ class Camera2Controller(
     fun closeCamera() {
         isClosedExplicitly = true
         mainHandler.removeCallbacksAndMessages(null)
+        retryCount = 0
         closeCameraInternal()
     }
 
