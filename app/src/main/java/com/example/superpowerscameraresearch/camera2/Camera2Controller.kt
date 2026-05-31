@@ -47,6 +47,7 @@ class Camera2Controller(
 
     @Volatile private var isOpening = false
     @Volatile private var retryCount = 0
+    @Volatile private var isClosedExplicitly = true
 
     private var cachedCharacteristics: CameraCharacteristics? = null
 
@@ -88,35 +89,43 @@ class Camera2Controller(
             }, cameraHandler)
         }
 
-        manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
-            override fun onOpened(device: CameraDevice) {
-                if (device.id != cameraId) { device.close(); return }
-                isOpening = false
-                retryCount = 0
-                cameraDevice = device
-                startPreviewSession(previewSurface!!)
-            }
-            override fun onDisconnected(device: CameraDevice) {
-                isOpening = false
-                closeCamera()
-                if (retryCount < MAX_RETRIES) {
-                    retryCount++
-                    mainHandler.postDelayed({ openCamera() }, 500)
-                } else {
-                    Log.e(TAG, "Camera disconnected, max retries ($MAX_RETRIES) exhausted")
+        isClosedExplicitly = false
+        try {
+            manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
+                override fun onOpened(device: CameraDevice) {
+                    if (isClosedExplicitly || device.id != cameraId) { device.close(); return }
+                    isOpening = false
+                    retryCount = 0
+                    cameraDevice = device
+                    val surface = previewSurface
+                    if (surface != null) startPreviewSession(surface)
+                    else { device.close(); cameraDevice = null }
                 }
-            }
-            override fun onError(device: CameraDevice, error: Int) {
-                isOpening = false
-                closeCamera()
-                if (retryCount < MAX_RETRIES) {
-                    retryCount++
-                    mainHandler.postDelayed({ openCamera() }, 500)
-                } else {
-                    Log.e(TAG, "Camera error $error, max retries ($MAX_RETRIES) exhausted")
+                override fun onDisconnected(device: CameraDevice) {
+                    isOpening = false
+                    closeCameraInternal()
+                    if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
+                        retryCount++
+                        mainHandler.postDelayed({ openCamera() }, 500)
+                    } else if (!isClosedExplicitly) {
+                        Log.e(TAG, "Camera disconnected, max retries ($MAX_RETRIES) exhausted")
+                    }
                 }
-            }
-        }, cameraHandler)
+                override fun onError(device: CameraDevice, error: Int) {
+                    isOpening = false
+                    closeCameraInternal()
+                    if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
+                        retryCount++
+                        mainHandler.postDelayed({ openCamera() }, 500)
+                    } else if (!isClosedExplicitly) {
+                        Log.e(TAG, "Camera error $error, max retries ($MAX_RETRIES) exhausted")
+                    }
+                }
+            }, cameraHandler)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open camera", e)
+            isOpening = false
+        }
     }
 
     private fun startPreviewSession(previewSurface: Surface) {
@@ -265,7 +274,12 @@ class Camera2Controller(
     }
 
     fun closeCamera() {
+        isClosedExplicitly = true
         mainHandler.removeCallbacksAndMessages(null)
+        closeCameraInternal()
+    }
+
+    private fun closeCameraInternal() {
         captureSession?.close(); captureSession = null
         cameraDevice?.close(); cameraDevice = null
         histogramReader?.setOnImageAvailableListener(null, null)

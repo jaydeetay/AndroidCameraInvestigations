@@ -321,6 +321,8 @@ class Camera2Fragment : Fragment() {
         binding.captureButton.setOnClickListener {
             if (supported) {
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                it.animate().cancel()
+                it.scaleX = 1f; it.scaleY = 1f
                 it.animate()
                     .scaleX(1.3f).scaleY(1.3f)
                     .setDuration(120)
