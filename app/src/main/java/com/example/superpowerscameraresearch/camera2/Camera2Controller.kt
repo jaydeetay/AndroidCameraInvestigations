@@ -33,6 +33,7 @@ class Camera2Controller(
 
     private val cameraThread = HandlerThread("Camera2Worker").also { it.start() }
     private val cameraHandler = Handler(cameraThread.looper)
+    private val mainHandler = Handler(android.os.Looper.getMainLooper())
 
     private var histogramReader: ImageReader? = null
     private var histogramFrameCount = 0
@@ -89,6 +90,7 @@ class Camera2Controller(
 
         manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
             override fun onOpened(device: CameraDevice) {
+                if (device.id != cameraId) { device.close(); return }
                 isOpening = false
                 retryCount = 0
                 cameraDevice = device
@@ -96,22 +98,20 @@ class Camera2Controller(
             }
             override fun onDisconnected(device: CameraDevice) {
                 isOpening = false
-                device.close()
-                cameraDevice = null
+                closeCamera()
                 if (retryCount < MAX_RETRIES) {
                     retryCount++
-                    cameraHandler.postDelayed({ openCamera() }, 500)
+                    mainHandler.postDelayed({ openCamera() }, 500)
                 } else {
                     Log.e(TAG, "Camera disconnected, max retries ($MAX_RETRIES) exhausted")
                 }
             }
             override fun onError(device: CameraDevice, error: Int) {
                 isOpening = false
-                device.close()
-                cameraDevice = null
+                closeCamera()
                 if (retryCount < MAX_RETRIES) {
                     retryCount++
-                    cameraHandler.postDelayed({ openCamera() }, 500)
+                    mainHandler.postDelayed({ openCamera() }, 500)
                 } else {
                     Log.e(TAG, "Camera error $error, max retries ($MAX_RETRIES) exhausted")
                 }
@@ -257,6 +257,7 @@ class Camera2Controller(
 
     fun switchCamera(newCameraId: String) {
         closeCamera()
+        isOpening = false
         cameraId = newCameraId
         cachedCharacteristics = null
         retryCount = 0
@@ -264,6 +265,7 @@ class Camera2Controller(
     }
 
     fun closeCamera() {
+        mainHandler.removeCallbacksAndMessages(null)
         captureSession?.close(); captureSession = null
         cameraDevice?.close(); cameraDevice = null
         histogramReader?.setOnImageAvailableListener(null, null)
