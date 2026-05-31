@@ -28,7 +28,7 @@ class Camera2Controller(
 ) {
     private val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
-    private var cameraDevice: CameraDevice? = null
+    @Volatile private var cameraDevice: CameraDevice? = null
     private var captureSession: CameraCaptureSession? = null
 
     private val cameraThread = HandlerThread("Camera2Worker").also { it.start() }
@@ -43,7 +43,7 @@ class Camera2Controller(
     private var pendingRawImage: android.media.Image? = null
     private val rawLock = Object()
 
-    private var previewSurface: Surface? = null
+    @Volatile private var previewSurface: Surface? = null
 
     @Volatile private var isOpening = false
     @Volatile private var retryCount = 0
