@@ -25,6 +25,7 @@ class Camera2Fragment : Fragment() {
     private lateinit var allCapabilities: List<CameraCapabilities>
     private lateinit var currentCapabilities: CameraCapabilities
     private var settings = CameraSettings()
+    private var activeSliderParam: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -44,7 +45,12 @@ class Camera2Fragment : Fragment() {
             context = requireContext(),
             textureView = binding.textureView,
             cameraId = currentCapabilities.cameraId,
-            onSettingsConfirmed = { /* will update HUD in a future task */ },
+            onSettingsConfirmed = { confirmed ->
+                activity?.runOnUiThread {
+                    _binding?.tvIso?.text = "ISO ${confirmed.iso}"
+                    _binding?.tvShutter?.text = CameraSettings.shutterNsToDisplay(confirmed.shutterNs)
+                }
+            },
             onFpsUpdate = { fps ->
                 activity?.runOnUiThread {
                     _binding?.tvFps?.text = "${"%.1f".format(fps)} fps"
@@ -52,6 +58,14 @@ class Camera2Fragment : Fragment() {
             },
             onHistogramReady = { hist, clipping ->
                 activity?.runOnUiThread { _binding?.histogramView?.update(hist, clipping) }
+            },
+            onLiveStatsUpdate = { aperture, focalLength, focusDistance, aeState ->
+                activity?.runOnUiThread {
+                    val ap = aperture?.let { String.format(java.util.Locale.US, "f/%.1f", it) } ?: "f/?"
+                    val fl = focalLength?.let { String.format(java.util.Locale.US, "%.0fmm", it) } ?: "?mm"
+                    val fd = focusDistance?.let { CameraSettings.focusDistanceToDisplay(it) } ?: "?D"
+                    _binding?.tvLiveStats?.text = "$ap  $fl  $fd  AE:$aeState"
+                }
             }
         )
 
@@ -73,11 +87,13 @@ class Camera2Fragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        binding.root.keepScreenOn = true
         if (binding.textureView.isAvailable) controller.openCamera()
     }
 
     override fun onPause() {
         super.onPause()
+        binding.root.keepScreenOn = false
         controller.closeCamera()
     }
 
@@ -97,14 +113,20 @@ class Camera2Fragment : Fragment() {
             Triple("SS",    "#FF88E888") { showShutterSlider() },
             Triple("WB",    "#FF8888E8") { showWbSlider() },
             Triple("FOCUS", "#FFEAA888") { showFocusSlider() },
-            Triple("ZOOM",  "#FFAA88E8") { showZoomSlider() }
+            Triple("INF",   "#FFEAA888") { tapInfinity() },
+            Triple("ZOOM",  "#FFAA88E8") { showZoomSlider() },
+            Triple("NR",    "#FFE8CC88") { cycleNoiseReduction() }
         )
         if (currentCapabilities.supportsOis) {
             params += Triple("OIS", "#FF88E8E8") { toggleOis() }
         }
         params.forEach { (label, colorHex, action) ->
             val pill = TextView(requireContext()).apply {
-                text = label
+                text = when (label) {
+                    "NR" -> nrLabel(settings.noiseReduction)
+                    "OIS" -> if (settings.oisEnabled) "OIS ON" else "OIS OFF"
+                    else -> label
+                }
                 setTextColor(Color.parseColor(colorHex))
                 background = androidx.core.content.ContextCompat.getDrawable(requireContext(), com.example.superpowerscameraresearch.R.drawable.hud_label_bg)
                 setPadding(16, 8, 16, 8)
@@ -118,11 +140,41 @@ class Camera2Fragment : Fragment() {
         }
     }
 
+    private fun cycleNoiseReduction() {
+        val next = when (settings.noiseReduction) {
+            android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_FAST ->
+                android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
+            android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY ->
+                android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_OFF
+            else -> android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_FAST
+        }
+        settings = settings.copy(noiseReduction = next)
+        controller.applySettings(settings)
+        binding.pillsContainer.findViewWithTag<TextView>("NR")?.text = nrLabel(next)
+    }
+
+    private fun nrLabel(mode: Int): String = when (mode) {
+        android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_FAST -> "NR:FAST"
+        android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY -> "NR:HQ"
+        android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_OFF -> "NR:OFF"
+        else -> "NR:?"
+    }
+
     private fun toggleOis() {
         settings = settings.copy(oisEnabled = !settings.oisEnabled)
         controller.applySettings(settings)
         binding.pillsContainer.findViewWithTag<TextView>("OIS")?.text =
             if (settings.oisEnabled) "OIS ON" else "OIS OFF"
+    }
+
+    private fun tapInfinity() {
+        settings = settings.copy(focusDistance = 0f)
+        controller.applySettings(settings)
+        if (binding.sliderPanel.visibility == View.VISIBLE &&
+            activeSliderParam == "FOCUS DISTANCE") {
+            binding.seekBar.progress = 0
+            binding.tvParamValue.text = "∞"
+        }
     }
 
     // ── Slider helpers ───────────────────────────────────────────────────────
@@ -172,7 +224,7 @@ class Camera2Fragment : Fragment() {
     private fun showFocusSlider() {
         showSlider("FOCUS DISTANCE", "∞ – 10D") { progress ->
             val d = progress / 1000f * 10f
-            settings = settings.copy(focusDistance = d, focusAuto = false)
+            settings = settings.copy(focusDistance = d)
             binding.tvParamValue.text = CameraSettings.focusDistanceToDisplay(d)
             controller.applySettings(settings)
         }
@@ -193,6 +245,7 @@ class Camera2Fragment : Fragment() {
     }
 
     private fun showSlider(name: String, range: String, onProgress: (Int) -> Unit) {
+        activeSliderParam = name
         binding.tvParamName.text = name
         binding.tvParamRange.text = range
         binding.sliderPanel.visibility = View.VISIBLE
@@ -209,6 +262,7 @@ class Camera2Fragment : Fragment() {
     private fun setupSlider() {
         binding.root.setOnClickListener {
             binding.sliderPanel.visibility = View.GONE
+            activeSliderParam = null
         }
         binding.sliderPanel.setOnClickListener { /* absorb — don't dismiss */ }
     }
@@ -272,7 +326,21 @@ class Camera2Fragment : Fragment() {
         binding.captureButton.isEnabled = supported
         binding.tvRawUnsupported.visibility = if (supported) android.view.View.GONE else android.view.View.VISIBLE
         binding.captureButton.setOnClickListener {
-            if (supported) controller.captureRaw()
+            if (supported) {
+                it.isEnabled = false
+                it.postDelayed({ it.isEnabled = true }, 1500)
+                it.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                it.animate().cancel()
+                it.scaleX = 1f; it.scaleY = 1f
+                it.animate()
+                    .scaleX(1.3f).scaleY(1.3f)
+                    .setDuration(120)
+                    .withEndAction {
+                        it.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+                    }
+                    .start()
+                controller.captureRaw()
+            }
         }
     }
 

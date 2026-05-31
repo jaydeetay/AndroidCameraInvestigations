@@ -23,15 +23,17 @@ class Camera2Controller(
     private var cameraId: String,
     private val onSettingsConfirmed: (CameraSettings) -> Unit,
     private val onFpsUpdate: (Float) -> Unit,
-    private val onHistogramReady: (IntArray, Boolean) -> Unit
+    private val onHistogramReady: (IntArray, Boolean) -> Unit,
+    private val onLiveStatsUpdate: (aperture: Float?, focalLength: Float?, focusDistance: Float?, aeState: String) -> Unit
 ) {
     private val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
-    private var cameraDevice: CameraDevice? = null
-    private var captureSession: CameraCaptureSession? = null
+    @Volatile private var cameraDevice: CameraDevice? = null
+    @Volatile private var captureSession: CameraCaptureSession? = null
 
     private val cameraThread = HandlerThread("Camera2Worker").also { it.start() }
     private val cameraHandler = Handler(cameraThread.looper)
+    private val mainHandler = Handler(android.os.Looper.getMainLooper())
 
     private var histogramReader: ImageReader? = null
     private var histogramFrameCount = 0
@@ -41,9 +43,17 @@ class Camera2Controller(
     private var pendingRawImage: android.media.Image? = null
     private val rawLock = Object()
 
-    private var previewSurface: Surface? = null
+    @Volatile private var previewSurface: Surface? = null
 
     @Volatile private var isOpening = false
+    @Volatile private var retryCount = 0
+    @Volatile private var isClosedExplicitly = true
+    @Volatile private var isRetryPending = false
+    private val retryRunnable = Runnable { isRetryPending = false; if (!isClosedExplicitly) openCamera() }
+    @Volatile private var lastAperture: Float? = null
+    @Volatile private var lastFocalLength: Float? = null
+    @Volatile private var lastFocusDistance: Float? = null
+    @Volatile private var lastAeState: String? = null
 
     private var cachedCharacteristics: CameraCharacteristics? = null
 
@@ -85,15 +95,52 @@ class Camera2Controller(
             }, cameraHandler)
         }
 
-        manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
-            override fun onOpened(device: CameraDevice) {
-                isOpening = false
-                cameraDevice = device
-                startPreviewSession(previewSurface!!)
-            }
-            override fun onDisconnected(device: CameraDevice) { isOpening = false; device.close(); cameraDevice = null }
-            override fun onError(device: CameraDevice, error: Int) { isOpening = false; device.close(); cameraDevice = null }
-        }, cameraHandler)
+        isClosedExplicitly = false
+        try {
+            manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
+                override fun onOpened(device: CameraDevice) {
+                    synchronized(this@Camera2Controller) {
+                        if (isClosedExplicitly) {
+                            isOpening = false
+                            device.close()
+                            return
+                        }
+                        if (device.id != cameraId) {
+                            device.close()
+                            return
+                        }
+                        isOpening = false
+                        retryCount = 0
+                        cameraDevice = device
+                        val surface = previewSurface
+                        if (surface != null) {
+                            try {
+                                startPreviewSession(surface)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to start preview session", e)
+                                device.close()
+                                cameraDevice = null
+                                handleCameraFailure(device, "Session start failed")
+                            }
+                        } else {
+                            device.close()
+                            cameraDevice = null
+                        }
+                    }
+                }
+                override fun onDisconnected(device: CameraDevice) {
+                    device.close()
+                    handleCameraFailure(device, "Camera disconnected")
+                }
+                override fun onError(device: CameraDevice, error: Int) {
+                    device.close()
+                    handleCameraFailure(device, "Camera error $error")
+                }
+            }, cameraHandler)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open camera", e)
+            isOpening = false
+        }
     }
 
     private fun startPreviewSession(previewSurface: Surface) {
@@ -165,18 +212,12 @@ class Camera2Controller(
             builder[CaptureRequest.COLOR_CORRECTION_GAINS] = colorTemperatureToGains(s.whiteBalanceK)
         }
 
-        if (s.focusAuto) {
-            builder[CaptureRequest.CONTROL_AF_MODE] = CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-        } else {
-            builder[CaptureRequest.CONTROL_AF_MODE] = CaptureRequest.CONTROL_AF_MODE_OFF
-            builder[CaptureRequest.LENS_FOCUS_DISTANCE] = s.focusDistance
-        }
+        builder[CaptureRequest.CONTROL_AF_MODE] = CaptureRequest.CONTROL_AF_MODE_OFF
+        builder[CaptureRequest.LENS_FOCUS_DISTANCE] = s.focusDistance
 
-        @Suppress("UNCHECKED_CAST")
-        val oisModes = characteristics.keys
-            .firstOrNull { it.name == "android.lens.info.availableOpticalStabilization" }
-            ?.let { characteristics.get(it as CameraCharacteristics.Key<IntArray>) }
-            ?: intArrayOf()
+        val oisModes = characteristics.get(
+            CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION
+        ) ?: intArrayOf()
         if (oisModes.contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)) {
             builder[CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE] =
                 if (s.oisEnabled) CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON
@@ -196,6 +237,8 @@ class Camera2Controller(
                     android.graphics.Rect(left, top, left + cropW, top + cropH)
             }
         }
+
+        builder[CaptureRequest.NOISE_REDUCTION_MODE] = s.noiseReduction
     }
 
     fun applySettings(settings: CameraSettings) {
@@ -227,17 +270,57 @@ class Camera2Controller(
             if (confirmedIso != null && confirmedSs != null) {
                 onSettingsConfirmed(currentSettings.copy(iso = confirmedIso, shutterNs = confirmedSs))
             }
+
+            val aperture      = result.get(CaptureResult.LENS_APERTURE)
+            val focalLength   = result.get(CaptureResult.LENS_FOCAL_LENGTH)
+            val focusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
+            val aeState       = aeStateToString(result.get(CaptureResult.CONTROL_AE_STATE))
+            if (aperture != lastAperture || focalLength != lastFocalLength ||
+                    focusDistance != lastFocusDistance || aeState != lastAeState) {
+                lastAperture = aperture
+                lastFocalLength = focalLength
+                lastFocusDistance = focusDistance
+                lastAeState = aeState
+                onLiveStatsUpdate(aperture, focalLength, focusDistance, aeState)
+            }
         }
     }
 
     fun switchCamera(newCameraId: String) {
         closeCamera()
+        isOpening = false
         cameraId = newCameraId
         cachedCharacteristics = null
+        retryCount = 0
         openCamera()
     }
 
+    @Synchronized
+    private fun handleCameraFailure(device: CameraDevice, logMsg: String) {
+        if (device == cameraDevice || (cameraDevice == null && device.id == cameraId)) {
+            isOpening = false
+            closeCameraInternal()
+            if (!isClosedExplicitly && retryCount < MAX_RETRIES && !isRetryPending) {
+                retryCount++
+                isRetryPending = true
+                mainHandler.removeCallbacks(retryRunnable)
+                mainHandler.postDelayed(retryRunnable, 500)
+            } else if (!isClosedExplicitly) {
+                Log.e(TAG, "$logMsg, max retries ($MAX_RETRIES) exhausted")
+            }
+        }
+    }
+
     fun closeCamera() {
+        isClosedExplicitly = true
+        isRetryPending = false
+        mainHandler.removeCallbacks(retryRunnable)
+        retryCount = 0
+        closeCameraInternal()
+    }
+
+    @Synchronized
+    private fun closeCameraInternal() {
         captureSession?.close(); captureSession = null
         cameraDevice?.close(); cameraDevice = null
         histogramReader?.setOnImageAvailableListener(null, null)
@@ -246,6 +329,8 @@ class Camera2Controller(
         rawReader?.close(); rawReader = null
         previewSurface?.release(); previewSurface = null
         histogramFrameCount = 0
+        lastAperture = null; lastFocalLength = null
+        lastFocusDistance = null; lastAeState = null
     }
 
     fun destroy() {
@@ -315,5 +400,15 @@ class Camera2Controller(
 
     companion object {
         private const val TAG = "Camera2Controller"
+        private const val MAX_RETRIES = 3
+
+        fun aeStateToString(state: Int?): String = when (state) {
+            CaptureResult.CONTROL_AE_STATE_SEARCHING -> "SEARCHING"
+            CaptureResult.CONTROL_AE_STATE_CONVERGED -> "CONVERGED"
+            CaptureResult.CONTROL_AE_STATE_LOCKED -> "LOCKED"
+            CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> "FLASH_REQ"
+            CaptureResult.CONTROL_AE_STATE_PRECAPTURE -> "PRECAPTURE"
+            else -> "INACTIVE"
+        }
     }
 }

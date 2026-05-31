@@ -7,10 +7,10 @@ data class CameraSettings(
     val shutterNs: Long = 33_333_333L,   // ~1/30s in nanoseconds
     val wbAuto: Boolean = true,
     val whiteBalanceK: Int = 4000,
-    val focusAuto: Boolean = true,
     val focusDistance: Float = 0f,       // 0 = infinity (Camera2 dioptre units)
     val zoom: Float = 1.0f,
-    val oisEnabled: Boolean = true
+    val oisEnabled: Boolean = true,
+    val noiseReduction: Int = 1          // CaptureRequest.NOISE_REDUCTION_MODE_FAST
 ) {
     companion object {
         fun shutterNsToDisplay(ns: Long): String {
