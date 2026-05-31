@@ -48,6 +48,10 @@ class Camera2Controller(
     @Volatile private var isOpening = false
     @Volatile private var retryCount = 0
     @Volatile private var isClosedExplicitly = true
+    private var lastAperture: Float? = null
+    private var lastFocalLength: Float? = null
+    private var lastFocusDistance: Float? = null
+    private var lastAeState: String? = null
 
     private var cachedCharacteristics: CameraCharacteristics? = null
 
@@ -113,27 +117,31 @@ class Camera2Controller(
                 }
                 override fun onDisconnected(device: CameraDevice) {
                     device.close()
-                    if (device.id == cameraId) {
-                        isOpening = false
-                        closeCameraInternal()
-                        if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
-                            retryCount++
-                            mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
-                        } else if (!isClosedExplicitly) {
-                            Log.e(TAG, "Camera disconnected, max retries ($MAX_RETRIES) exhausted")
+                    synchronized(this@Camera2Controller) {
+                        if (device == cameraDevice || (cameraDevice == null && device.id == cameraId)) {
+                            isOpening = false
+                            closeCameraInternal()
+                            if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
+                                retryCount++
+                                mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
+                            } else if (!isClosedExplicitly) {
+                                Log.e(TAG, "Camera disconnected, max retries ($MAX_RETRIES) exhausted")
+                            }
                         }
                     }
                 }
                 override fun onError(device: CameraDevice, error: Int) {
                     device.close()
-                    if (device.id == cameraId) {
-                        isOpening = false
-                        closeCameraInternal()
-                        if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
-                            retryCount++
-                            mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
-                        } else if (!isClosedExplicitly) {
-                            Log.e(TAG, "Camera error $error, max retries ($MAX_RETRIES) exhausted")
+                    synchronized(this@Camera2Controller) {
+                        if (device == cameraDevice || (cameraDevice == null && device.id == cameraId)) {
+                            isOpening = false
+                            closeCameraInternal()
+                            if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
+                                retryCount++
+                                mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
+                            } else if (!isClosedExplicitly) {
+                                Log.e(TAG, "Camera error $error, max retries ($MAX_RETRIES) exhausted")
+                            }
                         }
                     }
                 }
@@ -276,7 +284,14 @@ class Camera2Controller(
             val focalLength   = result.get(CaptureResult.LENS_FOCAL_LENGTH)
             val focusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
             val aeState       = aeStateToString(result.get(CaptureResult.CONTROL_AE_STATE))
-            onLiveStatsUpdate(aperture, focalLength, focusDistance, aeState)
+            if (aperture != lastAperture || focalLength != lastFocalLength ||
+                    focusDistance != lastFocusDistance || aeState != lastAeState) {
+                lastAperture = aperture
+                lastFocalLength = focalLength
+                lastFocusDistance = focusDistance
+                lastAeState = aeState
+                onLiveStatsUpdate(aperture, focalLength, focusDistance, aeState)
+            }
         }
     }
 
