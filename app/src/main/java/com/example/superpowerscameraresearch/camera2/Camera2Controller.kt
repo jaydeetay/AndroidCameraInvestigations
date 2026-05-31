@@ -133,6 +133,7 @@ class Camera2Controller(
                             closeCameraInternal()
                             if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
                                 retryCount++
+                                mainHandler.removeCallbacksAndMessages(null)
                                 mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
                             } else if (!isClosedExplicitly) {
                                 Log.e(TAG, "Camera disconnected, max retries ($MAX_RETRIES) exhausted")
@@ -148,6 +149,7 @@ class Camera2Controller(
                             closeCameraInternal()
                             if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
                                 retryCount++
+                                mainHandler.removeCallbacksAndMessages(null)
                                 mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
                             } else if (!isClosedExplicitly) {
                                 Log.e(TAG, "Camera error $error, max retries ($MAX_RETRIES) exhausted")
