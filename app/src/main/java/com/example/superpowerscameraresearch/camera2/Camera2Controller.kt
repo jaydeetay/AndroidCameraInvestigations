@@ -48,10 +48,10 @@ class Camera2Controller(
     @Volatile private var isOpening = false
     @Volatile private var retryCount = 0
     @Volatile private var isClosedExplicitly = true
-    private var lastAperture: Float? = null
-    private var lastFocalLength: Float? = null
-    private var lastFocusDistance: Float? = null
-    private var lastAeState: String? = null
+    @Volatile private var lastAperture: Float? = null
+    @Volatile private var lastFocalLength: Float? = null
+    @Volatile private var lastFocusDistance: Float? = null
+    @Volatile private var lastAeState: String? = null
 
     private var cachedCharacteristics: CameraCharacteristics? = null
 

@@ -25,6 +25,7 @@ class Camera2Fragment : Fragment() {
     private lateinit var allCapabilities: List<CameraCapabilities>
     private lateinit var currentCapabilities: CameraCapabilities
     private var settings = CameraSettings()
+    private var activeSliderParam: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -170,7 +171,7 @@ class Camera2Fragment : Fragment() {
         settings = settings.copy(focusDistance = 0f)
         controller.applySettings(settings)
         if (binding.sliderPanel.visibility == View.VISIBLE &&
-            binding.tvParamName.text == "FOCUS DISTANCE") {
+            activeSliderParam == "FOCUS DISTANCE") {
             binding.seekBar.progress = 0
             binding.tvParamValue.text = "∞"
         }
@@ -244,6 +245,7 @@ class Camera2Fragment : Fragment() {
     }
 
     private fun showSlider(name: String, range: String, onProgress: (Int) -> Unit) {
+        activeSliderParam = name
         binding.tvParamName.text = name
         binding.tvParamRange.text = range
         binding.sliderPanel.visibility = View.VISIBLE
@@ -260,6 +262,7 @@ class Camera2Fragment : Fragment() {
     private fun setupSlider() {
         binding.root.setOnClickListener {
             binding.sliderPanel.visibility = View.GONE
+            activeSliderParam = null
         }
         binding.sliderPanel.setOnClickListener { /* absorb — don't dismiss */ }
     }
