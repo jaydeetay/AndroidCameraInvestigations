@@ -49,6 +49,7 @@ class Camera2Controller(
     @Volatile private var retryCount = 0
     @Volatile private var isClosedExplicitly = true
     @Volatile private var isRetryPending = false
+    private val retryRunnable = Runnable { isRetryPending = false; if (!isClosedExplicitly) openCamera() }
     @Volatile private var lastAperture: Float? = null
     @Volatile private var lastFocalLength: Float? = null
     @Volatile private var lastFocusDistance: Float? = null
@@ -128,37 +129,11 @@ class Camera2Controller(
                 }
                 override fun onDisconnected(device: CameraDevice) {
                     device.close()
-                    synchronized(this@Camera2Controller) {
-                        if (device == cameraDevice || (cameraDevice == null && device.id == cameraId)) {
-                            isOpening = false
-                            closeCameraInternal()
-                            if (!isClosedExplicitly && retryCount < MAX_RETRIES && !isRetryPending) {
-                                retryCount++
-                                isRetryPending = true
-                                mainHandler.removeCallbacksAndMessages(null)
-                                mainHandler.postDelayed({ isRetryPending = false; if (!isClosedExplicitly) openCamera() }, 500)
-                            } else if (!isClosedExplicitly) {
-                                Log.e(TAG, "Camera disconnected, max retries ($MAX_RETRIES) exhausted")
-                            }
-                        }
-                    }
+                    handleCameraFailure(device, "Camera disconnected")
                 }
                 override fun onError(device: CameraDevice, error: Int) {
                     device.close()
-                    synchronized(this@Camera2Controller) {
-                        if (device == cameraDevice || (cameraDevice == null && device.id == cameraId)) {
-                            isOpening = false
-                            closeCameraInternal()
-                            if (!isClosedExplicitly && retryCount < MAX_RETRIES && !isRetryPending) {
-                                retryCount++
-                                isRetryPending = true
-                                mainHandler.removeCallbacksAndMessages(null)
-                                mainHandler.postDelayed({ isRetryPending = false; if (!isClosedExplicitly) openCamera() }, 500)
-                            } else if (!isClosedExplicitly) {
-                                Log.e(TAG, "Camera error $error, max retries ($MAX_RETRIES) exhausted")
-                            }
-                        }
-                    }
+                    handleCameraFailure(device, "Camera error $error")
                 }
             }, cameraHandler)
         } catch (e: Exception) {
@@ -319,10 +294,26 @@ class Camera2Controller(
         openCamera()
     }
 
+    @Synchronized
+    private fun handleCameraFailure(device: CameraDevice, logMsg: String) {
+        if (device == cameraDevice || (cameraDevice == null && device.id == cameraId)) {
+            isOpening = false
+            closeCameraInternal()
+            if (!isClosedExplicitly && retryCount < MAX_RETRIES && !isRetryPending) {
+                retryCount++
+                isRetryPending = true
+                mainHandler.removeCallbacks(retryRunnable)
+                mainHandler.postDelayed(retryRunnable, 500)
+            } else if (!isClosedExplicitly) {
+                Log.e(TAG, "$logMsg, max retries ($MAX_RETRIES) exhausted")
+            }
+        }
+    }
+
     fun closeCamera() {
         isClosedExplicitly = true
         isRetryPending = false
-        mainHandler.removeCallbacksAndMessages(null)
+        mainHandler.removeCallbacks(retryRunnable)
         retryCount = 0
         closeCameraInternal()
     }
