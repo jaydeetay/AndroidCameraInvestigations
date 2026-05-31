@@ -29,7 +29,7 @@ class Camera2Controller(
     private val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
     @Volatile private var cameraDevice: CameraDevice? = null
-    private var captureSession: CameraCaptureSession? = null
+    @Volatile private var captureSession: CameraCaptureSession? = null
 
     private val cameraThread = HandlerThread("Camera2Worker").also { it.start() }
     private val cameraHandler = Handler(cameraThread.looper)
