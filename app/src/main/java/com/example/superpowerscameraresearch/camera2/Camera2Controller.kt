@@ -93,21 +93,23 @@ class Camera2Controller(
         try {
             manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
                 override fun onOpened(device: CameraDevice) {
-                    if (isClosedExplicitly) {
+                    synchronized(this@Camera2Controller) {
+                        if (isClosedExplicitly) {
+                            isOpening = false
+                            device.close()
+                            return
+                        }
+                        if (device.id != cameraId) {
+                            device.close()
+                            return
+                        }
                         isOpening = false
-                        device.close()
-                        return
+                        retryCount = 0
+                        cameraDevice = device
+                        val surface = previewSurface
+                        if (surface != null) startPreviewSession(surface)
+                        else { device.close(); cameraDevice = null }
                     }
-                    if (device.id != cameraId) {
-                        device.close()
-                        return
-                    }
-                    isOpening = false
-                    retryCount = 0
-                    cameraDevice = device
-                    val surface = previewSurface
-                    if (surface != null) startPreviewSession(surface)
-                    else { device.close(); cameraDevice = null }
                 }
                 override fun onDisconnected(device: CameraDevice) {
                     device.close()
