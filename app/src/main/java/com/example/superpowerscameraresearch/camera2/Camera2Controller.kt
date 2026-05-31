@@ -48,6 +48,7 @@ class Camera2Controller(
     @Volatile private var isOpening = false
     @Volatile private var retryCount = 0
     @Volatile private var isClosedExplicitly = true
+    @Volatile private var isRetryPending = false
     @Volatile private var lastAperture: Float? = null
     @Volatile private var lastFocalLength: Float? = null
     @Volatile private var lastFocusDistance: Float? = null
@@ -131,10 +132,11 @@ class Camera2Controller(
                         if (device == cameraDevice || (cameraDevice == null && device.id == cameraId)) {
                             isOpening = false
                             closeCameraInternal()
-                            if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
+                            if (!isClosedExplicitly && retryCount < MAX_RETRIES && !isRetryPending) {
                                 retryCount++
+                                isRetryPending = true
                                 mainHandler.removeCallbacksAndMessages(null)
-                                mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
+                                mainHandler.postDelayed({ isRetryPending = false; if (!isClosedExplicitly) openCamera() }, 500)
                             } else if (!isClosedExplicitly) {
                                 Log.e(TAG, "Camera disconnected, max retries ($MAX_RETRIES) exhausted")
                             }
@@ -147,10 +149,11 @@ class Camera2Controller(
                         if (device == cameraDevice || (cameraDevice == null && device.id == cameraId)) {
                             isOpening = false
                             closeCameraInternal()
-                            if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
+                            if (!isClosedExplicitly && retryCount < MAX_RETRIES && !isRetryPending) {
                                 retryCount++
+                                isRetryPending = true
                                 mainHandler.removeCallbacksAndMessages(null)
-                                mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
+                                mainHandler.postDelayed({ isRetryPending = false; if (!isClosedExplicitly) openCamera() }, 500)
                             } else if (!isClosedExplicitly) {
                                 Log.e(TAG, "Camera error $error, max retries ($MAX_RETRIES) exhausted")
                             }
@@ -318,6 +321,7 @@ class Camera2Controller(
 
     fun closeCamera() {
         isClosedExplicitly = true
+        isRetryPending = false
         mainHandler.removeCallbacksAndMessages(null)
         retryCount = 0
         closeCameraInternal()
