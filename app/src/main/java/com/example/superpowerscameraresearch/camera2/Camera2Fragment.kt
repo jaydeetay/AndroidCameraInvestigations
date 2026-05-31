@@ -60,8 +60,8 @@ class Camera2Fragment : Fragment() {
             },
             onLiveStatsUpdate = { aperture, focalLength, focusDistance, aeState ->
                 activity?.runOnUiThread {
-                    val ap = aperture?.let { "f/${"%.1f".format(it)}" } ?: "f/?"
-                    val fl = focalLength?.let { "${"%.0f".format(it)}mm" } ?: "?mm"
+                    val ap = aperture?.let { String.format(java.util.Locale.US, "f/%.1f", it) } ?: "f/?"
+                    val fl = focalLength?.let { String.format(java.util.Locale.US, "%.0fmm", it) } ?: "?mm"
                     val fd = focusDistance?.let { CameraSettings.focusDistanceToDisplay(it) } ?: "?D"
                     _binding?.tvLiveStats?.text = "$ap  $fl  $fd  AE:$aeState"
                 }

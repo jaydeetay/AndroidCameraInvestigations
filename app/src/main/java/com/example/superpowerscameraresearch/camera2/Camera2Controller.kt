@@ -93,7 +93,11 @@ class Camera2Controller(
         try {
             manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
                 override fun onOpened(device: CameraDevice) {
-                    if (isClosedExplicitly || device.id != cameraId) { device.close(); return }
+                    if (isClosedExplicitly || device.id != cameraId) {
+                        isOpening = false
+                        device.close()
+                        return
+                    }
                     isOpening = false
                     retryCount = 0
                     cameraDevice = device
@@ -103,20 +107,22 @@ class Camera2Controller(
                 }
                 override fun onDisconnected(device: CameraDevice) {
                     isOpening = false
+                    device.close()
                     closeCameraInternal()
                     if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
                         retryCount++
-                        mainHandler.postDelayed({ openCamera() }, 500)
+                        mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
                     } else if (!isClosedExplicitly) {
                         Log.e(TAG, "Camera disconnected, max retries ($MAX_RETRIES) exhausted")
                     }
                 }
                 override fun onError(device: CameraDevice, error: Int) {
                     isOpening = false
+                    device.close()
                     closeCameraInternal()
                     if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
                         retryCount++
-                        mainHandler.postDelayed({ openCamera() }, 500)
+                        mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
                     } else if (!isClosedExplicitly) {
                         Log.e(TAG, "Camera error $error, max retries ($MAX_RETRIES) exhausted")
                     }
