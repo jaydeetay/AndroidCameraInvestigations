@@ -93,8 +93,12 @@ class Camera2Controller(
         try {
             manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
                 override fun onOpened(device: CameraDevice) {
-                    if (isClosedExplicitly || device.id != cameraId) {
+                    if (isClosedExplicitly) {
                         isOpening = false
+                        device.close()
+                        return
+                    }
+                    if (device.id != cameraId) {
                         device.close()
                         return
                     }
@@ -106,9 +110,9 @@ class Camera2Controller(
                     else { device.close(); cameraDevice = null }
                 }
                 override fun onDisconnected(device: CameraDevice) {
-                    isOpening = false
                     device.close()
                     if (device.id == cameraId) {
+                        isOpening = false
                         closeCameraInternal()
                         if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
                             retryCount++
@@ -119,9 +123,9 @@ class Camera2Controller(
                     }
                 }
                 override fun onError(device: CameraDevice, error: Int) {
-                    isOpening = false
                     device.close()
                     if (device.id == cameraId) {
+                        isOpening = false
                         closeCameraInternal()
                         if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
                             retryCount++
