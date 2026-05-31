@@ -121,7 +121,11 @@ class Camera2Fragment : Fragment() {
         }
         params.forEach { (label, colorHex, action) ->
             val pill = TextView(requireContext()).apply {
-                text = if (label == "NR") nrLabel(settings.noiseReduction) else label
+                text = when (label) {
+                    "NR" -> nrLabel(settings.noiseReduction)
+                    "OIS" -> if (settings.oisEnabled) "OIS ON" else "OIS OFF"
+                    else -> label
+                }
                 setTextColor(Color.parseColor(colorHex))
                 background = androidx.core.content.ContextCompat.getDrawable(requireContext(), com.example.superpowerscameraresearch.R.drawable.hud_label_bg)
                 setPadding(16, 8, 16, 8)
@@ -320,6 +324,8 @@ class Camera2Fragment : Fragment() {
         binding.tvRawUnsupported.visibility = if (supported) android.view.View.GONE else android.view.View.VISIBLE
         binding.captureButton.setOnClickListener {
             if (supported) {
+                it.isEnabled = false
+                it.postDelayed({ it.isEnabled = true }, 1500)
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
                 it.animate().cancel()
                 it.scaleX = 1f; it.scaleY = 1f

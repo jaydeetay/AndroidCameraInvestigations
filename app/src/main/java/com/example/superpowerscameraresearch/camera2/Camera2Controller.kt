@@ -108,23 +108,27 @@ class Camera2Controller(
                 override fun onDisconnected(device: CameraDevice) {
                     isOpening = false
                     device.close()
-                    closeCameraInternal()
-                    if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
-                        retryCount++
-                        mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
-                    } else if (!isClosedExplicitly) {
-                        Log.e(TAG, "Camera disconnected, max retries ($MAX_RETRIES) exhausted")
+                    if (device.id == cameraId) {
+                        closeCameraInternal()
+                        if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
+                            retryCount++
+                            mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
+                        } else if (!isClosedExplicitly) {
+                            Log.e(TAG, "Camera disconnected, max retries ($MAX_RETRIES) exhausted")
+                        }
                     }
                 }
                 override fun onError(device: CameraDevice, error: Int) {
                     isOpening = false
                     device.close()
-                    closeCameraInternal()
-                    if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
-                        retryCount++
-                        mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
-                    } else if (!isClosedExplicitly) {
-                        Log.e(TAG, "Camera error $error, max retries ($MAX_RETRIES) exhausted")
+                    if (device.id == cameraId) {
+                        closeCameraInternal()
+                        if (!isClosedExplicitly && retryCount < MAX_RETRIES) {
+                            retryCount++
+                            mainHandler.postDelayed({ if (!isClosedExplicitly) openCamera() }, 500)
+                        } else if (!isClosedExplicitly) {
+                            Log.e(TAG, "Camera error $error, max retries ($MAX_RETRIES) exhausted")
+                        }
                     }
                 }
             }, cameraHandler)
@@ -285,6 +289,7 @@ class Camera2Controller(
         closeCameraInternal()
     }
 
+    @Synchronized
     private fun closeCameraInternal() {
         captureSession?.close(); captureSession = null
         cameraDevice?.close(); cameraDevice = null
