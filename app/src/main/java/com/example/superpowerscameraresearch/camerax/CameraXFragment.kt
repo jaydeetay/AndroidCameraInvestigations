@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.*
 import android.widget.*
 import androidx.core.content.ContextCompat
+import androidx.camera.extensions.ExtensionMode
 import androidx.fragment.app.Fragment
 import com.example.superpowerscameraresearch.R
 import com.example.superpowerscameraresearch.camera2.Camera2Characteristics
@@ -28,6 +29,7 @@ class CameraXFragment : Fragment() {
     private lateinit var allCapabilities: List<CameraCapabilities>
     private lateinit var currentCapabilities: CameraCapabilities
     private var settings = CameraSettings()
+    private var extensionsAvailability: Map<Int, Boolean> = emptyMap()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentCameraxBinding.inflate(inflater, container, false)
@@ -50,6 +52,12 @@ class CameraXFragment : Fragment() {
             },
             onHistogramReady = { hist, clipping ->
                 activity?.runOnUiThread { _binding?.histogramView?.update(hist, clipping) }
+            },
+            onExtensionsAvailability = { avail ->
+                activity?.runOnUiThread {
+                    extensionsAvailability = avail
+                    setupPills()
+                }
             }
         )
 
@@ -91,9 +99,16 @@ class CameraXFragment : Fragment() {
         if (currentCapabilities.supportsOis) {
             params += Triple("OIS", "#FF88E8E8") { toggleOis() }
         }
+        if (extensionsAvailability[ExtensionMode.NIGHT] == true) {
+            params += Triple("NIGHT", "#FF9999FF") { toggleNightMode() }
+        }
         params.forEach { (label, colorHex, action) ->
             val pill = TextView(requireContext()).apply {
-                text = label
+                text = when (label) {
+                    "OIS"   -> if (settings.oisEnabled) "OIS ON" else "OIS OFF"
+                    "NIGHT" -> if (settings.nightMode) "NIGHT ON" else "NIGHT"
+                    else    -> label
+                }
                 tag = label
                 setTextColor(Color.parseColor(colorHex))
                 background = ContextCompat.getDrawable(requireContext(), R.drawable.hud_label_bg)
@@ -114,6 +129,23 @@ class CameraXFragment : Fragment() {
         controller.applySettings(settings)
         binding.pillsContainer.findViewWithTag<TextView>("OIS")?.text =
             if (settings.oisEnabled) "OIS ON" else "OIS OFF"
+    }
+
+    private fun toggleNightMode() {
+        settings = settings.copy(nightMode = !settings.nightMode)
+        controller.applySettings(settings)
+        binding.pillsContainer.findViewWithTag<TextView>("NIGHT")?.text =
+            if (settings.nightMode) "NIGHT ON" else "NIGHT"
+        setManualPillsEnabled(!settings.nightMode)
+    }
+
+    private fun setManualPillsEnabled(enabled: Boolean) {
+        listOf("ISO", "SS", "WB", "FOCUS", "ZOOM").forEach { tag ->
+            binding.pillsContainer.findViewWithTag<TextView>(tag)?.apply {
+                alpha = if (enabled) 1f else 0.4f
+                isClickable = enabled
+            }
+        }
     }
 
     private fun showIsoSlider() {
@@ -246,6 +278,9 @@ class CameraXFragment : Fragment() {
                 setPadding(24, 16, 24, 16)
                 setOnClickListener {
                     currentCapabilities = cap
+                    if (settings.nightMode) {
+                        settings = settings.copy(nightMode = false)
+                    }
                     controller.switchCamera(cap.cameraId)
                     binding.tvCameraSelector.text = "${"%.0f".format(cap.primaryFocalLength)}mm ▾"
                     updateHardwareLevelBadge()
@@ -293,6 +328,35 @@ class CameraXFragment : Fragment() {
                 setPadding(0, 8, 0, 8)
             }
             container.addView(row)
+        }
+        if (extensionsAvailability.isNotEmpty()) {
+            val header = TextView(requireContext()).apply {
+                text = "\nCameraX Extensions"
+                setTextColor(0xFFFFFFFF.toInt())
+                textSize = 12f
+                typeface = android.graphics.Typeface.MONOSPACE
+                setPadding(0, 16, 0, 4)
+            }
+            container.addView(header)
+
+            val extNames = mapOf(
+                ExtensionMode.NIGHT        to "NIGHT",
+                ExtensionMode.HDR          to "HDR",
+                ExtensionMode.BOKEH        to "BOKEH",
+                ExtensionMode.FACE_RETOUCH to "FACE_RETOUCH",
+                ExtensionMode.AUTO         to "AUTO"
+            )
+            extNames.forEach { (mode, name) ->
+                val supported = extensionsAvailability[mode] == true
+                val row = TextView(requireContext()).apply {
+                    text = "${"%-14s".format(name)}  ${if (supported) "✓" else "✗"}"
+                    setTextColor(if (supported) 0xFF88FF88.toInt() else 0xFF888888.toInt())
+                    textSize = 11f
+                    typeface = android.graphics.Typeface.MONOSPACE
+                    setPadding(0, 4, 0, 4)
+                }
+                container.addView(row)
+            }
         }
         sheet.setContentView(view)
         sheet.show()
