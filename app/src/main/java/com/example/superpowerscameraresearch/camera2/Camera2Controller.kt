@@ -196,20 +196,25 @@ class Camera2Controller(
     }
 
     private fun applySettings(builder: CaptureRequest.Builder, s: CameraSettings) {
-        if (s.isoAuto && s.shutterAuto) {
-            builder[CaptureRequest.CONTROL_AE_MODE] = CaptureRequest.CONTROL_AE_MODE_ON
+        if (s.nightSceneMode) {
+            builder[CaptureRequest.CONTROL_MODE] = CaptureRequest.CONTROL_MODE_USE_SCENE_MODE
+            builder[CaptureRequest.CONTROL_SCENE_MODE] = CaptureRequest.CONTROL_SCENE_MODE_NIGHT
         } else {
-            builder[CaptureRequest.CONTROL_AE_MODE] = CaptureRequest.CONTROL_AE_MODE_OFF
-            if (!s.isoAuto) builder[CaptureRequest.SENSOR_SENSITIVITY] = s.iso
-            if (!s.shutterAuto) builder[CaptureRequest.SENSOR_EXPOSURE_TIME] = s.shutterNs
-        }
+            if (s.isoAuto && s.shutterAuto) {
+                builder[CaptureRequest.CONTROL_AE_MODE] = CaptureRequest.CONTROL_AE_MODE_ON
+            } else {
+                builder[CaptureRequest.CONTROL_AE_MODE] = CaptureRequest.CONTROL_AE_MODE_OFF
+                if (!s.isoAuto) builder[CaptureRequest.SENSOR_SENSITIVITY] = s.iso
+                if (!s.shutterAuto) builder[CaptureRequest.SENSOR_EXPOSURE_TIME] = s.shutterNs
+            }
 
-        if (s.wbAuto) {
-            builder[CaptureRequest.CONTROL_AWB_MODE] = CaptureRequest.CONTROL_AWB_MODE_AUTO
-        } else {
-            builder[CaptureRequest.CONTROL_AWB_MODE] = CaptureRequest.CONTROL_AWB_MODE_OFF
-            builder[CaptureRequest.COLOR_CORRECTION_MODE] = CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX
-            builder[CaptureRequest.COLOR_CORRECTION_GAINS] = colorTemperatureToGains(s.whiteBalanceK)
+            if (s.wbAuto) {
+                builder[CaptureRequest.CONTROL_AWB_MODE] = CaptureRequest.CONTROL_AWB_MODE_AUTO
+            } else {
+                builder[CaptureRequest.CONTROL_AWB_MODE] = CaptureRequest.CONTROL_AWB_MODE_OFF
+                builder[CaptureRequest.COLOR_CORRECTION_MODE] = CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX
+                builder[CaptureRequest.COLOR_CORRECTION_GAINS] = colorTemperatureToGains(s.whiteBalanceK)
+            }
         }
 
         builder[CaptureRequest.CONTROL_AF_MODE] = CaptureRequest.CONTROL_AF_MODE_OFF
