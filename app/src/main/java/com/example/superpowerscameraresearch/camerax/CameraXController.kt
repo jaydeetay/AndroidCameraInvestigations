@@ -47,7 +47,9 @@ class CameraXController(
             provider = prov
             val extFuture = ExtensionsManager.getInstanceAsync(context, prov)
             extFuture.addListener({
-                extensionsManager = extFuture.get()
+                extensionsManager = runCatching { extFuture.get() }
+                    .onFailure { Log.e(TAG, "ExtensionsManager init failed", it) }
+                    .getOrNull()
                 onExtensionsAvailability(queryAvailability(cameraId))
                 bindUseCases()
             }, ContextCompat.getMainExecutor(context))

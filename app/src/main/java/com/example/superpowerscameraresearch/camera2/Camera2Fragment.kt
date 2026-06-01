@@ -322,6 +322,7 @@ class Camera2Fragment : Fragment() {
                 setOnClickListener {
                     if (settings.nightSceneMode) {
                         settings = settings.copy(nightSceneMode = false)
+                        controller.applySettings(settings)
                     }
                     currentCapabilities = cap
                     controller.switchCamera(cap.cameraId)

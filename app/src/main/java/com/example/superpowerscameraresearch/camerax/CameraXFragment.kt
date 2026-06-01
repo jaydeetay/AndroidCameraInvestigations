@@ -140,7 +140,7 @@ class CameraXFragment : Fragment() {
     }
 
     private fun setManualPillsEnabled(enabled: Boolean) {
-        listOf("ISO", "SS", "WB", "FOCUS", "ZOOM").forEach { tag ->
+        listOf("ISO", "SS", "WB", "FOCUS", "ZOOM", "OIS").forEach { tag ->
             binding.pillsContainer.findViewWithTag<TextView>(tag)?.apply {
                 alpha = if (enabled) 1f else 0.4f
                 isClickable = enabled
@@ -277,10 +277,11 @@ class CameraXFragment : Fragment() {
                 typeface = android.graphics.Typeface.MONOSPACE
                 setPadding(24, 16, 24, 16)
                 setOnClickListener {
-                    currentCapabilities = cap
                     if (settings.nightMode) {
                         settings = settings.copy(nightMode = false)
+                        controller.applySettings(settings)
                     }
+                    currentCapabilities = cap
                     controller.switchCamera(cap.cameraId)
                     binding.tvCameraSelector.text = "${"%.0f".format(cap.primaryFocalLength)}mm ▾"
                     updateHardwareLevelBadge()
