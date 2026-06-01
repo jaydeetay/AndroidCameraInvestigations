@@ -13,6 +13,8 @@ import android.util.Log
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.Camera2Interop
 import androidx.camera.core.*
+import androidx.camera.extensions.ExtensionMode
+import androidx.camera.extensions.ExtensionsManager
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
@@ -26,9 +28,11 @@ class CameraXController(
     private val previewView: PreviewView,
     private val lifecycleOwner: LifecycleOwner,
     private val onFpsUpdate: (Float) -> Unit,
-    private val onHistogramReady: (IntArray, Boolean) -> Unit
+    private val onHistogramReady: (IntArray, Boolean) -> Unit,
+    private val onExtensionsAvailability: (Map<Int, Boolean>) -> Unit = {}
 ) {
     private var provider: ProcessCameraProvider? = null
+    private var extensionsManager: ExtensionsManager? = null
     private var imageCapture: ImageCapture? = null
     private var currentCameraId: String = ""
     private var currentSettings = CameraSettings()
@@ -37,12 +41,36 @@ class CameraXController(
 
     fun start(cameraId: String) {
         currentCameraId = cameraId
-        val future = ProcessCameraProvider.getInstance(context)
-        future.addListener({
-            provider = future.get()
-            bindUseCases()
+        val providerFuture = ProcessCameraProvider.getInstance(context)
+        providerFuture.addListener({
+            val prov = providerFuture.get()
+            provider = prov
+            val extFuture = ExtensionsManager.getInstanceAsync(context, prov)
+            extFuture.addListener({
+                extensionsManager = extFuture.get()
+                onExtensionsAvailability(queryAvailability(cameraId))
+                bindUseCases()
+            }, ContextCompat.getMainExecutor(context))
         }, ContextCompat.getMainExecutor(context))
     }
+
+    private fun queryAvailability(cameraId: String): Map<Int, Boolean> {
+        val mgr = extensionsManager ?: return emptyMap()
+        val selector = buildSelectorForId(cameraId)
+        return mapOf(
+            ExtensionMode.NIGHT        to mgr.isExtensionAvailable(selector, ExtensionMode.NIGHT),
+            ExtensionMode.HDR          to mgr.isExtensionAvailable(selector, ExtensionMode.HDR),
+            ExtensionMode.BOKEH        to mgr.isExtensionAvailable(selector, ExtensionMode.BOKEH),
+            ExtensionMode.FACE_RETOUCH to mgr.isExtensionAvailable(selector, ExtensionMode.FACE_RETOUCH),
+            ExtensionMode.AUTO         to mgr.isExtensionAvailable(selector, ExtensionMode.AUTO)
+        )
+    }
+
+    private fun buildSelectorForId(cameraId: String): CameraSelector =
+        CameraSelector.Builder()
+            .addCameraFilter { cameras ->
+                cameras.filter { Camera2CameraInfo.from(it).cameraId == cameraId }.ifEmpty { cameras }
+            }.build()
 
     private fun bindUseCases() {
         val prov = provider ?: return
@@ -54,7 +82,7 @@ class CameraXController(
 
         val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         val characteristics = runCatching { cameraManager.getCameraCharacteristics(currentCameraId) }.getOrNull()
-        
+
         @Suppress("UNCHECKED_CAST")
         val oisModes = characteristics?.keys
             ?.firstOrNull { it.name == "android.lens.info.availableOpticalStabilization" }
@@ -62,7 +90,14 @@ class CameraXController(
             ?: intArrayOf()
         val supportsOis = oisModes.contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)
 
-        applyCamera2Interop(previewBuilder, analysisBuilder, captureBuilder, currentSettings, supportsOis)
+        val baseSelector = buildSelectorForId(currentCameraId)
+
+        val useNight = currentSettings.nightMode &&
+                extensionsManager?.isExtensionAvailable(baseSelector, ExtensionMode.NIGHT) == true
+
+        if (!useNight) {
+            applyCamera2Interop(previewBuilder, analysisBuilder, captureBuilder, currentSettings, supportsOis)
+        }
 
         val preview = previewBuilder.build().also {
             it.setSurfaceProvider(previewView.surfaceProvider)
@@ -94,15 +129,15 @@ class CameraXController(
 
         imageCapture = captureBuilder.build()
 
-        val selector = CameraSelector.Builder()
-            .addCameraFilter { cameras ->
-                cameras.filter { Camera2CameraInfo.from(it).cameraId == currentCameraId }
-                    .ifEmpty { cameras }
-            }.build()
+        val finalSelector = if (useNight) {
+            extensionsManager!!.getExtensionEnabledCameraSelector(baseSelector, ExtensionMode.NIGHT)
+        } else {
+            baseSelector
+        }
 
         prov.unbindAll()
         runCatching {
-            prov.bindToLifecycle(lifecycleOwner, selector, preview, analysis, imageCapture!!)
+            prov.bindToLifecycle(lifecycleOwner, finalSelector, preview, analysis, imageCapture!!)
         }.onFailure {
             Log.e(TAG, "Failed to bind CameraX use cases", it)
         }
@@ -160,6 +195,9 @@ class CameraXController(
 
     fun switchCamera(cameraId: String) {
         currentCameraId = cameraId
+        if (extensionsManager != null) {
+            onExtensionsAvailability(queryAvailability(cameraId))
+        }
         bindUseCases()
     }
 
