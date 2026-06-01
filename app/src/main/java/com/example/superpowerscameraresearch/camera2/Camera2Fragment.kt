@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata
 import android.os.Bundle
 import android.view.*
 import android.widget.*
@@ -120,12 +121,16 @@ class Camera2Fragment : Fragment() {
         if (currentCapabilities.supportsOis) {
             params += Triple("OIS", "#FF88E8E8") { toggleOis() }
         }
+        if (currentCapabilities.availableSceneModes.contains(CameraMetadata.CONTROL_SCENE_MODE_NIGHT)) {
+            params += Triple("NIGHT", "#FF9999FF") { toggleNightSceneMode() }
+        }
         params.forEach { (label, colorHex, action) ->
             val pill = TextView(requireContext()).apply {
                 text = when (label) {
-                    "NR" -> nrLabel(settings.noiseReduction)
-                    "OIS" -> if (settings.oisEnabled) "OIS ON" else "OIS OFF"
-                    else -> label
+                    "NR"    -> nrLabel(settings.noiseReduction)
+                    "OIS"   -> if (settings.oisEnabled) "OIS ON" else "OIS OFF"
+                    "NIGHT" -> if (settings.nightSceneMode) "NIGHT ON" else "NIGHT"
+                    else    -> label
                 }
                 setTextColor(Color.parseColor(colorHex))
                 background = androidx.core.content.ContextCompat.getDrawable(requireContext(), com.example.superpowerscameraresearch.R.drawable.hud_label_bg)
@@ -165,6 +170,23 @@ class Camera2Fragment : Fragment() {
         controller.applySettings(settings)
         binding.pillsContainer.findViewWithTag<TextView>("OIS")?.text =
             if (settings.oisEnabled) "OIS ON" else "OIS OFF"
+    }
+
+    private fun toggleNightSceneMode() {
+        settings = settings.copy(nightSceneMode = !settings.nightSceneMode)
+        controller.applySettings(settings)
+        binding.pillsContainer.findViewWithTag<TextView>("NIGHT")?.text =
+            if (settings.nightSceneMode) "NIGHT ON" else "NIGHT"
+        setManualPillsEnabled(!settings.nightSceneMode)
+    }
+
+    private fun setManualPillsEnabled(enabled: Boolean) {
+        listOf("ISO", "SS", "WB", "FOCUS", "INF", "ZOOM").forEach { tag ->
+            binding.pillsContainer.findViewWithTag<TextView>(tag)?.apply {
+                alpha = if (enabled) 1f else 0.4f
+                isClickable = enabled
+            }
+        }
     }
 
     private fun tapInfinity() {
@@ -298,11 +320,14 @@ class Camera2Fragment : Fragment() {
                 setPadding(32, 20, 32, 20)
                 setBackgroundColor(if (cap.cameraId == currentCapabilities.cameraId) 0x22FFFFFF else 0x00000000)
                 setOnClickListener {
+                    if (settings.nightSceneMode) {
+                        settings = settings.copy(nightSceneMode = false)
+                    }
                     currentCapabilities = cap
                     controller.switchCamera(cap.cameraId)
                     updateCameraSelectorLabel()
                     updateHardwareLevelBadge()
-                    setupPills()  // re-create pills (OIS may change)
+                    setupPills()  // re-create pills (OIS/NIGHT may change)
                     setupCapture()
                     sheet.dismiss()
                 }
