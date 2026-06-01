@@ -10,7 +10,9 @@ data class CameraSettings(
     val focusDistance: Float = 0f,       // 0 = infinity (Camera2 dioptre units)
     val zoom: Float = 1.0f,
     val oisEnabled: Boolean = true,
-    val noiseReduction: Int = 1          // CaptureRequest.NOISE_REDUCTION_MODE_FAST
+    val noiseReduction: Int = 1,         // CaptureRequest.NOISE_REDUCTION_MODE_FAST
+    val nightMode: Boolean = false,
+    val nightSceneMode: Boolean = false
 ) {
     companion object {
         fun shutterNsToDisplay(ns: Long): String {

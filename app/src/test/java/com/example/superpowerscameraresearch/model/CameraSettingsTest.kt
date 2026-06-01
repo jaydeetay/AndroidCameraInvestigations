@@ -1,6 +1,7 @@
 package com.example.superpowerscameraresearch.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -41,5 +42,21 @@ class CameraSettingsTest {
     fun `shutterNs rounds correctly for common speeds`() {
         assertEquals("1/60s", CameraSettings.shutterNsToDisplay(16_666_667L))
         assertEquals("1/125s", CameraSettings.shutterNsToDisplay(8_000_000L))
+    }
+
+    @Test
+    fun `default nightMode is false`() {
+        assertFalse(CameraSettings().nightMode)
+    }
+
+    @Test
+    fun `default nightSceneMode is false`() {
+        assertFalse(CameraSettings().nightSceneMode)
+    }
+
+    @Test
+    fun `copy preserves nightMode`() {
+        val s = CameraSettings(nightMode = true)
+        assertTrue(s.copy(iso = 400).nightMode)
     }
 }
