@@ -53,6 +53,7 @@ object Camera2Characteristics {
         val zoomRange: Range<Float>? = if (Build.VERSION.SDK_INT >= 30) {
             c.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)
         } else null
+        val sceneModes = c.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES)?.toList() ?: emptyList()
 
         return CameraCapabilities(
             cameraId = cameraId,
@@ -68,7 +69,8 @@ object Camera2Characteristics {
             isLogicalCamera = isLogical,
             physicalCameras = physicalCameras,
             sensorSizeMm = sensorSize?.let { SizeF(it.width, it.height) },
-            zoomRatioRange = zoomRange
+            zoomRatioRange = zoomRange,
+            availableSceneModes = sceneModes
         )
     }
 
@@ -136,6 +138,33 @@ object Camera2Characteristics {
         add("AE Modes", c.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)?.contentToString())
         add("AWB Modes", c.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES)?.contentToString())
         add("AF Modes", c.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)?.contentToString())
+
+        val sceneModesRaw = c.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES)
+        if (sceneModesRaw != null) {
+            val names = sceneModesRaw.map { mode ->
+                when (mode) {
+                    CameraMetadata.CONTROL_SCENE_MODE_DISABLED       -> "DISABLED"
+                    CameraMetadata.CONTROL_SCENE_MODE_FACE_PRIORITY  -> "FACE_PRIORITY"
+                    CameraMetadata.CONTROL_SCENE_MODE_ACTION         -> "ACTION"
+                    CameraMetadata.CONTROL_SCENE_MODE_PORTRAIT       -> "PORTRAIT"
+                    CameraMetadata.CONTROL_SCENE_MODE_LANDSCAPE      -> "LANDSCAPE"
+                    CameraMetadata.CONTROL_SCENE_MODE_NIGHT          -> "NIGHT"
+                    CameraMetadata.CONTROL_SCENE_MODE_NIGHT_PORTRAIT -> "NIGHT_PORTRAIT"
+                    CameraMetadata.CONTROL_SCENE_MODE_THEATRE        -> "THEATRE"
+                    CameraMetadata.CONTROL_SCENE_MODE_BEACH          -> "BEACH"
+                    CameraMetadata.CONTROL_SCENE_MODE_SNOW           -> "SNOW"
+                    CameraMetadata.CONTROL_SCENE_MODE_SUNSET         -> "SUNSET"
+                    CameraMetadata.CONTROL_SCENE_MODE_STEADYPHOTO    -> "STEADYPHOTO"
+                    CameraMetadata.CONTROL_SCENE_MODE_FIREWORKS      -> "FIREWORKS"
+                    CameraMetadata.CONTROL_SCENE_MODE_SPORTS         -> "SPORTS"
+                    CameraMetadata.CONTROL_SCENE_MODE_PARTY          -> "PARTY"
+                    CameraMetadata.CONTROL_SCENE_MODE_CANDLELIGHT    -> "CANDLELIGHT"
+                    CameraMetadata.CONTROL_SCENE_MODE_BARCODE        -> "BARCODE"
+                    else -> "UNKNOWN($mode)"
+                }
+            }
+            add("Scene Modes", names.joinToString(", "))
+        }
 
         return result
     }
