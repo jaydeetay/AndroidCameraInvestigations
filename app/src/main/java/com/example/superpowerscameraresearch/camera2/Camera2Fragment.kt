@@ -9,6 +9,8 @@ import android.hardware.camera2.CameraMetadata
 import android.os.Bundle
 import android.view.*
 import android.widget.*
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import com.example.superpowerscameraresearch.databinding.FragmentCamera2Binding
 import com.example.superpowerscameraresearch.model.CameraCapabilities
@@ -84,6 +86,47 @@ class Camera2Fragment : Fragment() {
             override fun onSurfaceTextureDestroyed(st: SurfaceTexture) = true
             override fun onSurfaceTextureUpdated(st: SurfaceTexture) = Unit
         }
+
+        applyEdgeToEdgeInsets()
+    }
+
+    private fun applyEdgeToEdgeInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            val d = resources.displayMetrics.density
+            val navH = nav.bottom
+            val captureBase = (16 * d).toInt()
+            val captureH = (48 * d).toInt()
+            val sidePad = (40 * d).toInt()
+
+            (binding.captureButton.layoutParams as FrameLayout.LayoutParams).apply {
+                bottomMargin = navH + captureBase
+            }
+            binding.captureButton.requestLayout()
+
+            val pillsBottom = navH + captureBase + captureH + (8 * d).toInt()
+            val pillsHeight = (28 * d).toInt()
+
+            (binding.pillsContainer.layoutParams as FrameLayout.LayoutParams).apply {
+                bottomMargin = pillsBottom
+            }
+            binding.pillsContainer.requestLayout()
+
+            (binding.histogramView.layoutParams as FrameLayout.LayoutParams).apply {
+                bottomMargin = pillsBottom + pillsHeight + (8 * d).toInt()
+            }
+            binding.histogramView.requestLayout()
+
+            (binding.sliderPanel.layoutParams as FrameLayout.LayoutParams).apply {
+                bottomMargin = navH + captureBase + captureH + (32 * d).toInt()
+                marginStart = sidePad
+                marginEnd = sidePad
+            }
+            binding.sliderPanel.requestLayout()
+
+            insets
+        }
+        ViewCompat.requestApplyInsets(binding.root)
     }
 
     override fun onResume() {
