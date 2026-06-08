@@ -78,6 +78,8 @@ class CameraXFragment : Fragment() {
             }
         )
 
+        controller.setLensInfo(currentCapabilities.primaryAperture, currentCapabilities.primaryFocalLength)
+
         setupPills()
         setupSlider()
         setupCameraSelector()
@@ -399,7 +401,7 @@ class CameraXFragment : Fragment() {
         binding.captureButton.isEnabled = supported
         binding.tvRawUnsupported.visibility = if (supported) View.GONE else View.VISIBLE
         binding.captureButton.setOnClickListener {
-            if (supported) controller.captureRaw()
+            if (supported) controller.captureRaw(lastSources)
         }
     }
 

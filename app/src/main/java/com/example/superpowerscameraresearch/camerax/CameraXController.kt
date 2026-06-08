@@ -19,8 +19,13 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import com.example.superpowerscameraresearch.model.CameraSettings
+import com.example.superpowerscameraresearch.overlay.DetectedSource
 import com.example.superpowerscameraresearch.overlay.HistogramComputer
+import com.example.superpowerscameraresearch.overlay.PhotoStamper
+import com.example.superpowerscameraresearch.overlay.SourceDetectionOverlay
 import java.util.concurrent.Executors
 
 class CameraXController(
@@ -40,6 +45,9 @@ class CameraXController(
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     @Volatile private var lastTimestamp = 0L
     private var boundCamera: androidx.camera.core.Camera? = null
+    private var stampAperture: Float? = null
+    private var stampFocalLengthMm: Float? = null
+    @Volatile private var pendingDetectSources: List<DetectedSource> = emptyList()
 
     fun start(cameraId: String) {
         currentCameraId = cameraId
@@ -204,6 +212,11 @@ class CameraXController(
         }
     }
 
+    fun setLensInfo(aperture: Float, focalLengthMm: Float) {
+        stampAperture = aperture
+        stampFocalLengthMm = focalLengthMm
+    }
+
     fun applySettings(settings: CameraSettings) {
         currentSettings = settings
         bindUseCases()
@@ -217,10 +230,13 @@ class CameraXController(
         bindUseCases()
     }
 
-    fun captureRaw() {
+    fun captureRaw(detectedSources: List<DetectedSource> = emptyList()) {
         val capture = imageCapture ?: return
+        pendingDetectSources = detectedSources
+
+        val ts = System.currentTimeMillis()
         val values = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, "IMG_${System.currentTimeMillis()}.jpg")
+            put(MediaStore.MediaColumns.DISPLAY_NAME, "IMG_$ts.jpg")
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
             put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/CameraInvestigations")
         }
@@ -231,7 +247,38 @@ class CameraXController(
         ).build()
         capture.takePicture(options, ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageSavedCallback {
-                override fun onImageSaved(output: ImageCapture.OutputFileResults) {}
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    val uri = output.savedUri ?: return
+                    val settings = currentSettings
+                    val sources = pendingDetectSources
+                    runCatching {
+                        val bm = context.contentResolver.openInputStream(uri)!!.use {
+                            BitmapFactory.decodeStream(it)
+                        } ?: return@runCatching
+
+                        val stamped = PhotoStamper.stamp(bm, settings, stampAperture, stampFocalLengthMm, "CameraX")
+
+                        context.contentResolver.openOutputStream(uri, "wt")!!.use { out ->
+                            stamped.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                        }
+
+                        if (settings.sourceDetectionSensitivity > 0 && sources.isNotEmpty()) {
+                            val annotated = SourceDetectionOverlay.drawOnto(stamped, sources, 640, 360)
+                            val detectTs = System.currentTimeMillis()
+                            val detectValues = ContentValues().apply {
+                                put(MediaStore.MediaColumns.DISPLAY_NAME, "IMG_${detectTs}_detect.jpg")
+                                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                                put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/CameraInvestigations")
+                            }
+                            val detectUri = context.contentResolver.insert(
+                                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, detectValues
+                            )!!
+                            context.contentResolver.openOutputStream(detectUri)!!.use { out ->
+                                annotated.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                            }
+                        }
+                    }.onFailure { Log.e(TAG, "Stamp failed", it) }
+                }
                 override fun onError(exc: ImageCaptureException) {
                     Log.e(TAG, "Capture failed", exc)
                 }
