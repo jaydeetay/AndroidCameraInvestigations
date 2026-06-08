@@ -38,6 +38,7 @@ class CameraXController(
     private var currentSettings = CameraSettings()
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     @Volatile private var lastTimestamp = 0L
+    private var boundCamera: androidx.camera.core.Camera? = null
 
     fun start(cameraId: String) {
         currentCameraId = cameraId
@@ -139,7 +140,17 @@ class CameraXController(
 
         prov.unbindAll()
         runCatching {
-            prov.bindToLifecycle(lifecycleOwner, finalSelector, preview, analysis, imageCapture!!)
+            // ImageAnalysis is incompatible with most CameraX extension modes.
+            // Drop it when using night extension; histogram/FPS are suspended in that mode.
+            val useCases = if (useNight) {
+                arrayOf(preview, imageCapture!!)
+            } else {
+                arrayOf(preview, analysis, imageCapture!!)
+            }
+            boundCamera = prov.bindToLifecycle(lifecycleOwner, finalSelector, *useCases)
+            if (useNight) {
+                boundCamera?.cameraControl?.setZoomRatio(currentSettings.zoom)
+            }
         }.onFailure {
             Log.e(TAG, "Failed to bind CameraX use cases", it)
         }
