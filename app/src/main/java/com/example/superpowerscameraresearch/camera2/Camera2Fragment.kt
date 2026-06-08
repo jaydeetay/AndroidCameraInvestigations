@@ -224,7 +224,7 @@ class Camera2Fragment : Fragment() {
     }
 
     private fun setManualPillsEnabled(enabled: Boolean) {
-        listOf("ISO", "SS", "WB", "FOCUS", "INF", "ZOOM").forEach { tag ->
+        listOf("ISO", "SS", "WB", "FOCUS", "INF").forEach { tag ->
             binding.pillsContainer.findViewWithTag<TextView>(tag)?.apply {
                 alpha = if (enabled) 1f else 0.4f
                 isClickable = enabled
