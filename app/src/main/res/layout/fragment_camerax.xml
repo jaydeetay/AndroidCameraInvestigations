@@ -16,6 +16,11 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <com.example.superpowerscameraresearch.overlay.SourceDetectionOverlay
+        android:id="@+id/sourceDetectionOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
     <com.example.superpowerscameraresearch.overlay.HistogramView
         android:id="@+id/histogramView"
         android:layout_width="88dp"
