@@ -118,16 +118,24 @@
         android:fontFamily="monospace"
         android:text="" />
 
-    <!-- Parameter pills container -->
-    <LinearLayout
-        android:id="@+id/pillsContainer"
+    <!-- Parameter pills container — scrollable so extra pills don't fall off screen -->
+    <HorizontalScrollView
+        android:id="@+id/pillsScrollView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:layout_marginBottom="80dp"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:paddingHorizontal="4dp" />
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/pillsContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingHorizontal="4dp" />
+
+    </HorizontalScrollView>
 
     <!-- Active slider panel -->
     <LinearLayout

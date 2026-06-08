@@ -74,6 +74,7 @@ class CameraXFragment : Fragment() {
                     binding.sourceDetectionOverlay.setSources(sources)
                 } else {
                     lastSources = emptyList()
+                    binding.sourceDetectionOverlay.clear()
                 }
             }
         )
@@ -108,10 +109,10 @@ class CameraXFragment : Fragment() {
             val pillsBottom = navH + captureBase + captureH + (8 * d).toInt()
             val pillsHeight = (28 * d).toInt()
 
-            (binding.pillsContainer.layoutParams as FrameLayout.LayoutParams).apply {
+            (binding.pillsScrollView.layoutParams as FrameLayout.LayoutParams).apply {
                 bottomMargin = pillsBottom
             }
-            binding.pillsContainer.requestLayout()
+            binding.pillsScrollView.requestLayout()
 
             (binding.histogramView.layoutParams as FrameLayout.LayoutParams).apply {
                 bottomMargin = pillsBottom + pillsHeight + (8 * d).toInt()
