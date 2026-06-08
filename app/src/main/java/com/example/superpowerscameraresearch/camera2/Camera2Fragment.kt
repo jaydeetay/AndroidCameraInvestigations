@@ -15,6 +15,9 @@ import androidx.fragment.app.Fragment
 import com.example.superpowerscameraresearch.databinding.FragmentCamera2Binding
 import com.example.superpowerscameraresearch.model.CameraCapabilities
 import com.example.superpowerscameraresearch.model.CameraSettings
+import com.example.superpowerscameraresearch.overlay.ConnectedComponentDetector
+import com.example.superpowerscameraresearch.overlay.DetectedSource
+import com.example.superpowerscameraresearch.overlay.SourceDetector
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlin.math.exp
 import kotlin.math.ln
@@ -29,6 +32,8 @@ class Camera2Fragment : Fragment() {
     private lateinit var currentCapabilities: CameraCapabilities
     private var settings = CameraSettings()
     private var activeSliderParam: String? = null
+    private val sourceDetector: SourceDetector = ConnectedComponentDetector()
+    private var lastSources: List<DetectedSource> = emptyList()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -68,6 +73,16 @@ class Camera2Fragment : Fragment() {
                     val fl = focalLength?.let { String.format(java.util.Locale.US, "%.0fmm", it) } ?: "?mm"
                     val fd = focusDistance?.let { CameraSettings.focusDistanceToDisplay(it) } ?: "?D"
                     _binding?.tvLiveStats?.text = "$ap  $fl  $fd  AE:$aeState"
+                }
+            },
+            onFrameAvailable = { luma, stride, w, h ->
+                val sens = settings.sourceDetectionSensitivity
+                if (sens > 0) {
+                    val sources = sourceDetector.detect(luma, stride, w, h, sens)
+                    lastSources = sources
+                    binding.sourceDetectionOverlay.setSources(sources)
+                } else {
+                    lastSources = emptyList()
                 }
             }
         )
@@ -159,7 +174,8 @@ class Camera2Fragment : Fragment() {
             Triple("FOCUS", "#FFEAA888") { showFocusSlider() },
             Triple("INF",   "#FFEAA888") { tapInfinity() },
             Triple("ZOOM",  "#FFAA88E8") { showZoomSlider() },
-            Triple("NR",    "#FFE8CC88") { cycleNoiseReduction() }
+            Triple("NR",    "#FFE8CC88") { cycleNoiseReduction() },
+            Triple("DETECT", "#FFFF6666") { showDetectSlider() }
         )
         if (currentCapabilities.supportsOis) {
             params += Triple("OIS", "#FF88E8E8") { toggleOis() }
@@ -170,10 +186,12 @@ class Camera2Fragment : Fragment() {
         params.forEach { (label, colorHex, action) ->
             val pill = TextView(requireContext()).apply {
                 text = when (label) {
-                    "NR"    -> nrLabel(settings.noiseReduction)
-                    "OIS"   -> if (settings.oisEnabled) "OIS ON" else "OIS OFF"
-                    "NIGHT" -> if (settings.nightSceneMode) "NIGHT ON" else "NIGHT"
-                    else    -> label
+                    "NR"     -> nrLabel(settings.noiseReduction)
+                    "OIS"    -> if (settings.oisEnabled) "OIS ON" else "OIS OFF"
+                    "NIGHT"  -> if (settings.nightSceneMode) "NIGHT ON" else "NIGHT"
+                    "DETECT" -> if (settings.sourceDetectionSensitivity == 0) "DETECT OFF"
+                                else "DETECT ${settings.sourceDetectionSensitivity}%"
+                    else     -> label
                 }
                 setTextColor(Color.parseColor(colorHex))
                 background = androidx.core.content.ContextCompat.getDrawable(requireContext(), com.example.superpowerscameraresearch.R.drawable.hud_label_bg)
@@ -307,6 +325,31 @@ class Camera2Fragment : Fragment() {
         }
         binding.seekBar.progress = ((settings.zoom - 1f) / (maxZoom - 1f) * 1000).toInt()
         binding.tvParamValue.text = "${"%.1f".format(settings.zoom)}×"
+    }
+
+    private fun showDetectSlider() {
+        showSlider("DETECT", "OFF ←→ 100%") { progress ->
+            settings = settings.copy(sourceDetectionSensitivity = progress)
+            binding.tvParamValue.text = if (progress == 0) "OFF" else "$progress%"
+            updateDetectPill()
+            controller.applySettings(settings)
+            if (progress == 0) binding.sourceDetectionOverlay.clear()
+        }
+        binding.seekBar.max = 100  // DETECT uses 0–100, not 0–1000
+        binding.seekBar.progress = settings.sourceDetectionSensitivity
+        binding.tvParamValue.text = if (settings.sourceDetectionSensitivity == 0) "OFF"
+                                     else "${settings.sourceDetectionSensitivity}%"
+    }
+
+    private fun updateDetectPill() {
+        val pill = binding.pillsContainer.findViewWithTag<TextView>("DETECT") ?: return
+        if (settings.sourceDetectionSensitivity == 0) {
+            pill.text = "DETECT OFF"
+            pill.alpha = 0.4f
+        } else {
+            pill.text = "DETECT ${settings.sourceDetectionSensitivity}%"
+            pill.alpha = 1f
+        }
     }
 
     private fun showSlider(name: String, range: String, onProgress: (Int) -> Unit) {

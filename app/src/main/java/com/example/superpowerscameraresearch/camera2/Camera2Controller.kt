@@ -24,7 +24,8 @@ class Camera2Controller(
     private val onSettingsConfirmed: (CameraSettings) -> Unit,
     private val onFpsUpdate: (Float) -> Unit,
     private val onHistogramReady: (IntArray, Boolean) -> Unit,
-    private val onLiveStatsUpdate: (aperture: Float?, focalLength: Float?, focusDistance: Float?, aeState: String) -> Unit
+    private val onLiveStatsUpdate: (aperture: Float?, focalLength: Float?, focusDistance: Float?, aeState: String) -> Unit,
+    private val onFrameAvailable: ((luma: ByteArray, stride: Int, width: Int, height: Int) -> Unit)? = null
 ) {
     private val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
@@ -91,6 +92,7 @@ class Camera2Controller(
                 )
                 val clipping = HistogramComputer.isClipping(histogram)
                 onHistogramReady(histogram, clipping)
+                onFrameAvailable?.invoke(bytes, plane.rowStride, image.width, image.height)
                 image.close()
             }, cameraHandler)
         }
