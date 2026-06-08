@@ -17,7 +17,10 @@ import com.example.superpowerscameraresearch.camera2.Camera2Characteristics
 import com.example.superpowerscameraresearch.databinding.FragmentCameraxBinding
 import com.example.superpowerscameraresearch.model.CameraCapabilities
 import com.example.superpowerscameraresearch.model.CameraSettings
+import com.example.superpowerscameraresearch.overlay.ConnectedComponentDetector
+import com.example.superpowerscameraresearch.overlay.DetectedSource
 import com.example.superpowerscameraresearch.overlay.HistogramView
+import com.example.superpowerscameraresearch.overlay.SourceDetector
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlin.math.exp
 import kotlin.math.ln
@@ -32,6 +35,8 @@ class CameraXFragment : Fragment() {
     private lateinit var currentCapabilities: CameraCapabilities
     private var settings = CameraSettings()
     private var extensionsAvailability: Map<Int, Boolean> = emptyMap()
+    private val sourceDetector: SourceDetector = ConnectedComponentDetector()
+    private var lastSources: List<DetectedSource> = emptyList()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentCameraxBinding.inflate(inflater, container, false)
@@ -59,6 +64,16 @@ class CameraXFragment : Fragment() {
                 activity?.runOnUiThread {
                     extensionsAvailability = avail
                     setupPills()
+                }
+            },
+            onFrameAvailable = { luma, stride, w, h ->
+                val sens = settings.sourceDetectionSensitivity
+                if (sens > 0) {
+                    val sources = sourceDetector.detect(luma, stride, w, h, sens)
+                    lastSources = sources
+                    binding.sourceDetectionOverlay.setSources(sources)
+                } else {
+                    lastSources = emptyList()
                 }
             }
         )
@@ -136,7 +151,8 @@ class CameraXFragment : Fragment() {
             Triple("SS",  "#FF88E888") { showShutterSlider() },
             Triple("WB",  "#FF8888E8") { showWbSlider() },
             Triple("FOCUS","#FFEAA888") { showFocusSlider() },
-            Triple("ZOOM","#FFAA88E8") { showZoomSlider() }
+            Triple("ZOOM","#FFAA88E8") { showZoomSlider() },
+            Triple("DETECT", "#FFFF6666") { showDetectSlider() }
         )
         if (currentCapabilities.supportsOis) {
             params += Triple("OIS", "#FF88E8E8") { toggleOis() }
@@ -147,9 +163,11 @@ class CameraXFragment : Fragment() {
         params.forEach { (label, colorHex, action) ->
             val pill = TextView(requireContext()).apply {
                 text = when (label) {
-                    "OIS"   -> if (settings.oisEnabled) "OIS ON" else "OIS OFF"
-                    "NIGHT" -> if (settings.nightMode) "NIGHT ON" else "NIGHT"
-                    else    -> label
+                    "OIS"    -> if (settings.oisEnabled) "OIS ON" else "OIS OFF"
+                    "NIGHT"  -> if (settings.nightMode) "NIGHT ON" else "NIGHT"
+                    "DETECT" -> if (settings.sourceDetectionSensitivity == 0) "DETECT OFF"
+                                else "DETECT ${settings.sourceDetectionSensitivity}%"
+                    else     -> label
                 }
                 tag = label
                 setTextColor(Color.parseColor(colorHex))
@@ -294,6 +312,39 @@ class CameraXFragment : Fragment() {
             override fun onStartTrackingTouch(sb: SeekBar) = Unit
             override fun onStopTrackingTouch(sb: SeekBar) = Unit
         })
+    }
+
+    private fun showDetectSlider() {
+        binding.tvParamName.text = "DETECT"
+        binding.tvParamRange.text = "OFF ←→ 100%"
+        binding.sliderPanel.visibility = View.VISIBLE
+        binding.seekBar.max = 100
+        binding.seekBar.progress = settings.sourceDetectionSensitivity
+        binding.tvParamValue.text = if (settings.sourceDetectionSensitivity == 0) "OFF"
+                                     else "${settings.sourceDetectionSensitivity}%"
+        binding.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
+                if (!fromUser) return
+                settings = settings.copy(sourceDetectionSensitivity = p)
+                binding.tvParamValue.text = if (p == 0) "OFF" else "$p%"
+                controller.applySettings(settings)
+                updateDetectPill()
+                if (p == 0) binding.sourceDetectionOverlay.clear()
+            }
+            override fun onStartTrackingTouch(sb: SeekBar) = Unit
+            override fun onStopTrackingTouch(sb: SeekBar) = Unit
+        })
+    }
+
+    private fun updateDetectPill() {
+        val pill = binding.pillsContainer.findViewWithTag<TextView>("DETECT") ?: return
+        if (settings.sourceDetectionSensitivity == 0) {
+            pill.text = "DETECT OFF"
+            pill.alpha = 0.4f
+        } else {
+            pill.text = "DETECT ${settings.sourceDetectionSensitivity}%"
+            pill.alpha = 1f
+        }
     }
 
     private fun setupSlider() {

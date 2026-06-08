@@ -29,7 +29,8 @@ class CameraXController(
     private val lifecycleOwner: LifecycleOwner,
     private val onFpsUpdate: (Float) -> Unit,
     private val onHistogramReady: (IntArray, Boolean) -> Unit,
-    private val onExtensionsAvailability: (Map<Int, Boolean>) -> Unit = {}
+    private val onExtensionsAvailability: (Map<Int, Boolean>) -> Unit = {},
+    private val onFrameAvailable: ((luma: ByteArray, stride: Int, width: Int, height: Int) -> Unit)? = null
 ) {
     private var provider: ProcessCameraProvider? = null
     private var extensionsManager: ExtensionsManager? = null
@@ -118,13 +119,15 @@ class CameraXController(
 
                 if (++frameCount % 3 == 0) {
                     val plane = imageProxy.planes[0]
+                    val bytes = plane.buffer.let { buf -> ByteArray(buf.remaining()).also { buf.get(it) } }
                     val histogram = HistogramComputer.compute(
-                        plane.buffer.let { buf -> ByteArray(buf.remaining()).also { buf.get(it) } },
+                        bytes,
                         stride = plane.rowStride,
                         width = imageProxy.width,
                         height = imageProxy.height
                     )
                     onHistogramReady(histogram, HistogramComputer.isClipping(histogram))
+                    onFrameAvailable?.invoke(bytes, plane.rowStride, imageProxy.width, imageProxy.height)
                 }
                 imageProxy.close()
             }
