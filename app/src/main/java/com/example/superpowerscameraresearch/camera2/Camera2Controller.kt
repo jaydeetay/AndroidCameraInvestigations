@@ -14,8 +14,13 @@ import android.provider.MediaStore
 import android.util.Log
 import android.view.Surface
 import android.view.TextureView
+import android.graphics.BitmapFactory
+import android.graphics.Bitmap
 import com.example.superpowerscameraresearch.model.CameraSettings
 import com.example.superpowerscameraresearch.overlay.HistogramComputer
+import com.example.superpowerscameraresearch.overlay.PhotoStamper
+import com.example.superpowerscameraresearch.overlay.SourceDetectionOverlay
+import com.example.superpowerscameraresearch.overlay.DetectedSource
 
 class Camera2Controller(
     private val context: Context,
@@ -44,6 +49,12 @@ class Camera2Controller(
     private var pendingRawImage: android.media.Image? = null
     private val rawLock = Object()
 
+    private var jpegReader: ImageReader? = null
+    private var stampAperture: Float? = null
+    private var stampFocalLengthMm: Float? = null
+    @Volatile private var pendingStampSettings: CameraSettings? = null
+    @Volatile private var pendingDetectSources: List<DetectedSource> = emptyList()
+
     @Volatile private var previewSurface: Surface? = null
 
     @Volatile private var isOpening = false
@@ -61,6 +72,11 @@ class Camera2Controller(
     private var lastFrameTimestamp = 0L
     var currentSettings = CameraSettings()
         private set
+
+    fun setLensInfo(aperture: Float, focalLengthMm: Float) {
+        stampAperture = aperture
+        stampFocalLengthMm = focalLengthMm
+    }
 
     val characteristics: CameraCharacteristics
         get() = cachedCharacteristics ?: manager.getCameraCharacteristics(cameraId).also {
@@ -94,6 +110,23 @@ class Camera2Controller(
                 onHistogramReady(histogram, clipping)
                 onFrameAvailable?.invoke(bytes, plane.rowStride, image.width, image.height)
                 image.close()
+            }, cameraHandler)
+        }
+
+        jpegReader = ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 2).also { reader ->
+            reader.setOnImageAvailableListener({ r ->
+                val image = r.acquireLatestImage() ?: return@setOnImageAvailableListener
+                val stampSettings = pendingStampSettings ?: currentSettings
+                val detectSources = pendingDetectSources
+                try {
+                    val bytes = ByteArray(image.planes[0].buffer.remaining())
+                    image.planes[0].buffer.get(bytes)
+                    val rawBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        ?: return@setOnImageAvailableListener
+                    saveStampedJpeg(rawBitmap, stampSettings, detectSources)
+                } finally {
+                    image.close()
+                }
             }, cameraHandler)
         }
 
@@ -170,6 +203,7 @@ class Camera2Controller(
             add(previewSurface)
             add(histSurface)
             rawReader?.surface?.let { add(it) }
+            jpegReader?.surface?.let { add(it) }
         }
 
         cameraDevice!!.createCaptureSession(
@@ -340,6 +374,8 @@ class Camera2Controller(
         histogramReader?.close(); histogramReader = null
         rawReader?.setOnImageAvailableListener(null, null)
         rawReader?.close(); rawReader = null
+        jpegReader?.setOnImageAvailableListener(null, null)
+        jpegReader?.close(); jpegReader = null
         previewSurface?.release(); previewSurface = null
         histogramFrameCount = 0
         lastAperture = null; lastFocalLength = null
@@ -351,13 +387,18 @@ class Camera2Controller(
         cameraThread.quitSafely()
     }
 
-    fun captureRaw() {
+    fun captureRaw(detectedSources: List<DetectedSource> = emptyList()) {
         val rawReaderLocal = rawReader ?: return
+        val jpegReaderLocal = jpegReader ?: return
         val surface = previewSurface ?: return
+
+        pendingStampSettings = currentSettings
+        pendingDetectSources = detectedSources
 
         val builder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE) ?: return
         builder.addTarget(surface)
         builder.addTarget(rawReaderLocal.surface)
+        builder.addTarget(jpegReaderLocal.surface)
         applySettings(builder, currentSettings)
         builder[CaptureRequest.CONTROL_CAPTURE_INTENT] = CaptureRequest.CONTROL_CAPTURE_INTENT_STILL_CAPTURE
 
@@ -373,6 +414,36 @@ class Camera2Controller(
                 }
             }
         }, cameraHandler)
+    }
+
+    private fun saveStampedJpeg(
+        rawBitmap: Bitmap,
+        settings: CameraSettings,
+        detectSources: List<DetectedSource>
+    ) {
+        val ts = System.currentTimeMillis()
+        val stamped = PhotoStamper.stamp(rawBitmap, settings, stampAperture, stampFocalLengthMm, "Camera2", ts)
+
+        fun saveBitmap(bitmap: Bitmap, name: String) {
+            runCatching {
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, name)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/CameraInvestigations")
+                }
+                val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)!!
+                context.contentResolver.openOutputStream(uri)!!.use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                }
+            }.onFailure { Log.e(TAG, "Failed to save JPEG $name", it) }
+        }
+
+        saveBitmap(stamped, "IMG_$ts.jpg")
+
+        if (settings.sourceDetectionSensitivity > 0 && detectSources.isNotEmpty()) {
+            val annotated = SourceDetectionOverlay.drawOnto(stamped, detectSources, 640, 360)
+            saveBitmap(annotated, "IMG_${ts}_detect.jpg")
+        }
     }
 
     private fun tryWriteDng() {

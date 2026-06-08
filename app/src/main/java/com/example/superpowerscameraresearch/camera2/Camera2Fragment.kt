@@ -87,6 +87,8 @@ class Camera2Fragment : Fragment() {
             }
         )
 
+        controller.setLensInfo(currentCapabilities.primaryAperture, currentCapabilities.primaryFocalLength)
+
         setupPills()
         setupSlider()
         setupCameraSelector()
@@ -451,7 +453,7 @@ class Camera2Fragment : Fragment() {
                         it.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
                     }
                     .start()
-                controller.captureRaw()
+                controller.captureRaw(lastSources)
             }
         }
     }
