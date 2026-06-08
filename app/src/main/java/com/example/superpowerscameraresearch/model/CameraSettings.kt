@@ -12,7 +12,8 @@ data class CameraSettings(
     val oisEnabled: Boolean = true,
     val noiseReduction: Int = 1,         // CaptureRequest.NOISE_REDUCTION_MODE_FAST
     val nightMode: Boolean = false,
-    val nightSceneMode: Boolean = false
+    val nightSceneMode: Boolean = false,
+    val sourceDetectionSensitivity: Int = 0  // 0 = off, 1–100
 ) {
     companion object {
         fun shutterNsToDisplay(ns: Long): String {
