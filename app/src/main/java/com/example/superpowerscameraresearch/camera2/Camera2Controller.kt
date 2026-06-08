@@ -229,8 +229,14 @@ class Camera2Controller(
                 else CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF
         }
 
-        if (Build.VERSION.SDK_INT >= 30) {
-            builder[CaptureRequest.CONTROL_ZOOM_RATIO] = s.zoom
+        // CONTROL_ZOOM_RATIO requires API 30 AND explicit device support.
+        // Fall back to SCALER_CROP_REGION on devices that don't advertise a zoom range.
+        val zoomRatioRange = if (Build.VERSION.SDK_INT >= 30) {
+            characteristics.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)
+        } else null
+
+        if (zoomRatioRange != null) {
+            builder[CaptureRequest.CONTROL_ZOOM_RATIO] = s.zoom.coerceIn(zoomRatioRange.lower, zoomRatioRange.upper)
         } else {
             val activeArray = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
             if (activeArray != null) {
@@ -249,10 +255,10 @@ class Camera2Controller(
     fun applySettings(settings: CameraSettings) {
         currentSettings = settings
         val previewSurface = previewSurface ?: return
-        val histSurface = histogramReader?.surface ?: return
         val builder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW) ?: return
         builder.addTarget(previewSurface)
-        builder.addTarget(histSurface)
+        // Histogram surface is optional — its absence must not suppress other settings.
+        histogramReader?.surface?.let { builder.addTarget(it) }
         applySettings(builder, settings)
         captureSession?.setRepeatingRequest(builder.build(), captureCallback, cameraHandler)
     }
