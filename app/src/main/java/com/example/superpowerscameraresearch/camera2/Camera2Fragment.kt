@@ -80,7 +80,9 @@ class Camera2Fragment : Fragment() {
                 if (sens > 0) {
                     val sources = sourceDetector.detect(luma, stride, w, h, sens)
                     lastSources = sources
-                    binding.sourceDetectionOverlay.setSources(sources)
+                    binding.sourceDetectionOverlay.setSources(
+                        sources, w, h, currentCapabilities.sensorOrientation
+                    )
                 } else {
                     lastSources = emptyList()
                     binding.sourceDetectionOverlay.clear()

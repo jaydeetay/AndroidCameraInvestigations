@@ -12,6 +12,7 @@ class SourceDetectionOverlay @JvmOverloads constructor(
     private var sources: List<DetectedSource> = emptyList()
     private var analysisWidth: Int = 640
     private var analysisHeight: Int = 360
+    private var sensorOrientation: Int = 0
 
     private val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#FF4444")
@@ -19,10 +20,16 @@ class SourceDetectionOverlay @JvmOverloads constructor(
         strokeWidth = 3f
     }
 
-    fun setSources(sources: List<DetectedSource>, analysisWidth: Int = 640, analysisHeight: Int = 360) {
+    fun setSources(
+        sources: List<DetectedSource>,
+        analysisWidth: Int = 640,
+        analysisHeight: Int = 360,
+        sensorOrientation: Int = 0
+    ) {
         this.sources = sources
         this.analysisWidth = analysisWidth
         this.analysisHeight = analysisHeight
+        this.sensorOrientation = sensorOrientation
         post { invalidate() }
     }
 
@@ -34,15 +41,45 @@ class SourceDetectionOverlay @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         if (sources.isEmpty()) return
 
-        val scaleX = width.toFloat() / analysisWidth
-        val scaleY = height.toFloat() / analysisHeight
-
         circlePaint.strokeWidth = 1.5f * resources.displayMetrics.density
 
+        val W = analysisWidth.toFloat()
+        val H = analysisHeight.toFloat()
+        val vw = width.toFloat()
+        val vh = height.toFloat()
+
         for (src in sources) {
-            val vx = src.cx * scaleX
-            val vy = src.cy * scaleY
-            val vr = src.radius * maxOf(scaleX, scaleY)
+            // Map sensor-space (cx, cy) to view-space accounting for sensor rotation.
+            // Sensor orientation is degrees CW needed to rotate sensor image to upright portrait.
+            val (vx, vy, vr) = when (sensorOrientation) {
+                90 -> {
+                    // 90° CW: sensor landscape → portrait. (sx,sy) → ((1-sy/H)*vw, (sx/W)*vh)
+                    val x = (1f - src.cy / H) * vw
+                    val y = (src.cx / W) * vh
+                    val r = src.radius * maxOf(vw / H, vh / W)
+                    Triple(x, y, r)
+                }
+                270 -> {
+                    // 270° CW (90° CCW): (sx,sy) → ((sy/H)*vw, (1-sx/W)*vh)
+                    val x = (src.cy / H) * vw
+                    val y = (1f - src.cx / W) * vh
+                    val r = src.radius * maxOf(vw / H, vh / W)
+                    Triple(x, y, r)
+                }
+                180 -> {
+                    val x = (1f - src.cx / W) * vw
+                    val y = (1f - src.cy / H) * vh
+                    val r = src.radius * maxOf(vw / W, vh / H)
+                    Triple(x, y, r)
+                }
+                else -> {
+                    // 0°: no rotation
+                    val x = (src.cx / W) * vw
+                    val y = (src.cy / H) * vh
+                    val r = src.radius * maxOf(vw / W, vh / H)
+                    Triple(x, y, r)
+                }
+            }
             canvas.drawCircle(vx, vy, vr, circlePaint)
         }
     }

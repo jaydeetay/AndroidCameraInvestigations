@@ -54,6 +54,7 @@ object Camera2Characteristics {
             c.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)
         } else null
         val sceneModes = c.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES)?.toList() ?: emptyList()
+        val sensorOrientation = c.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
 
         return CameraCapabilities(
             cameraId = cameraId,
@@ -70,7 +71,8 @@ object Camera2Characteristics {
             physicalCameras = physicalCameras,
             sensorSizeMm = sensorSize?.let { SizeF(it.width, it.height) },
             zoomRatioRange = zoomRange,
-            availableSceneModes = sceneModes
+            availableSceneModes = sceneModes,
+            sensorOrientation = sensorOrientation
         )
     }
 

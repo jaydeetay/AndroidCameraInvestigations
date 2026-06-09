@@ -24,7 +24,8 @@ data class CameraCapabilities(
     val physicalCameras: List<PhysicalCamera>,
     val sensorSizeMm: SizeF?,              // physical sensor size in millimetres
     val zoomRatioRange: Range<Float>?,      // null on API < 30
-    val availableSceneModes: List<Int> = emptyList()
+    val availableSceneModes: List<Int> = emptyList(),
+    val sensorOrientation: Int = 0         // degrees CW to rotate sensor image to upright portrait
 ) {
     val hardwareLevelName: String get() = when (hardwareLevel) {
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY   -> "LEGACY"
